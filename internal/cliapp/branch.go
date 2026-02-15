@@ -7,9 +7,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"syscall"
 
+	"fitz/internal/session"
 	"fitz/internal/worktree"
 )
 
@@ -74,6 +76,19 @@ func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 	return runExec(copilotPath, []string{"copilot"}, os.Environ())
 }
 
+// copilotConfigDir returns the Copilot configuration directory.
+// It respects XDG_CONFIG_HOME if set, otherwise defaults to ~/.copilot.
+var copilotConfigDir = func() string {
+	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
+		return filepath.Join(d, "copilot")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".copilot")
+}
+
 func BrGo(ctx context.Context, w io.Writer, name string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -97,7 +112,14 @@ func BrGo(ctx context.Context, w io.Writer, name string) error {
 		return fmt.Errorf("cd to worktree: %w", err)
 	}
 
-	return runExec(copilotPath, []string{"copilot", "--continue"}, os.Environ())
+	args := []string{"copilot"}
+	if configDir := copilotConfigDir(); configDir != "" {
+		if sessionID, err := session.FindLatestSession(configDir, path); err == nil && sessionID != "" {
+			args = append(args, "--resume", sessionID)
+		}
+	}
+
+	return runExec(copilotPath, args, os.Environ())
 }
 
 func BrRemove(ctx context.Context, w io.Writer, name string, force bool) error {
