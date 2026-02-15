@@ -14,6 +14,18 @@ import (
 var Version = "dev"
 var runUpdate = cliapp.Update
 
+// Subcommand represents a command that has its own sub-subcommands.
+// Any such command must provide a Help method.
+type Subcommand interface {
+	Help(w io.Writer)
+	Run(ctx context.Context, args []string, stdout, stderr io.Writer) error
+}
+
+// All commands with sub-subcommands must be registered here.
+var subcommands = map[string]Subcommand{
+	"br": brCommand{},
+}
+
 type commandLine struct {
 	Version    struct{} `cmd:"" help:"Print version information."`
 	Update     struct{} `cmd:"" help:"Update fitz to the latest release."`
@@ -30,8 +42,13 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	}
 
 	commandName := strings.TrimSpace(args[0])
-	if commandName == "br" {
-		return handleBr(args[1:], stdout, stderr)
+	if sub, ok := subcommands[commandName]; ok {
+		subArgs := args[1:]
+		if len(subArgs) > 0 && isHelpArg(subArgs[0]) {
+			sub.Help(stdout)
+			return nil
+		}
+		return sub.Run(context.Background(), subArgs, stdout, stderr)
 	}
 
 	cli := commandLine{}
@@ -87,9 +104,27 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  version       Print version information")
 }
 
-func handleBr(args []string, stdout, stderr io.Writer) error {
-	ctx := context.Background()
+func isHelpArg(s string) bool {
+	return s == "help" || s == "--help" || s == "-h"
+}
 
+type brCommand struct{}
+
+func (brCommand) Help(w io.Writer) {
+	fmt.Fprintln(w, "Usage: fitz br <command>")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  cd      Print the path to a worktree")
+	fmt.Fprintln(w, "  go      Switch to an existing worktree")
+	fmt.Fprintln(w, "  help    Show this help message")
+	fmt.Fprintln(w, "  list    List all worktrees")
+	fmt.Fprintln(w, "  new     Create a new worktree")
+	fmt.Fprintln(w, "  rm      Remove a worktree")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Run with no command to show the current worktree.")
+}
+
+func (b brCommand) Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return cliapp.BrCurrent(ctx, stdout)
 	}
@@ -140,6 +175,7 @@ func handleBr(args []string, stdout, stderr io.Writer) error {
 		return cliapp.BrCd(ctx, stdout, args[1])
 
 	default:
+		b.Help(stderr)
 		return fmt.Errorf("unknown br subcommand: %s", subcommand)
 	}
 }

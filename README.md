@@ -19,6 +19,7 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
   - `fitz br rm <name> [--force]` — remove a worktree.
   - `fitz br list` — list all worktrees.
   - `fitz br cd <name>` — print the path to a worktree (for shell integration).
+  - `fitz br help` — show br usage and available subcommands.
 - `fitz completion <bash|zsh>` — print completion script for your shell.
 - `fitz help` — print usage.
 - `fitz update` — replace the current executable with the latest release asset for your OS/arch.

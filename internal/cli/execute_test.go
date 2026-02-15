@@ -107,6 +107,23 @@ func TestExecuteBrCommands(t *testing.T) {
 	}
 }
 
+func TestAllSubcommandsHandleHelp(t *testing.T) {
+	for name := range subcommands {
+		for _, helpArg := range []string{"help", "--help", "-h"} {
+			t.Run(name+"/"+helpArg, func(t *testing.T) {
+				var out, errOut bytes.Buffer
+				err := Execute([]string{name, helpArg}, &out, &errOut)
+				if err != nil {
+					t.Fatalf("Execute(%s %s) returned error: %v", name, helpArg, err)
+				}
+				if !strings.Contains(out.String(), "Usage:") {
+					t.Fatalf("stdout = %q, want Usage header", out.String())
+				}
+			})
+		}
+	}
+}
+
 func TestExecuteBrRmExtraArgs(t *testing.T) {
 	tests := []struct {
 		name    string
