@@ -23,6 +23,7 @@ func TestExecuteKnownCommands(t *testing.T) {
 		want string
 	}{
 		{name: "help", args: []string{"help"}, want: "fitz dev"},
+		{name: "help long flag", args: []string{"--help"}, want: "fitz dev"},
 		{name: "version", args: []string{"version"}, want: "fitz dev"},
 		{name: "update", args: []string{"update"}, want: "updated from fitz_test"},
 		{name: "completion bash", args: []string{"completion", "bash"}, want: "complete -F _fitz_completion fitz"},
