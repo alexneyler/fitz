@@ -213,3 +213,25 @@ func TestExecuteBrRmExtraArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestExecuteTodoHelp(t *testing.T) {
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"todos"}, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "Usage: fitz todos") {
+		t.Fatalf("stdout = %q, want usage header", out.String())
+	}
+}
+
+func TestExecuteHelpListsTodo(t *testing.T) {
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"help"}, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "todos") {
+		t.Fatalf("stdout = %q, want 'todos' listed", out.String())
+	}
+}

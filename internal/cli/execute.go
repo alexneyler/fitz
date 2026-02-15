@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -23,7 +24,8 @@ type Subcommand interface {
 
 // All commands with sub-subcommands must be registered here.
 var subcommands = map[string]Subcommand{
-	"br": brCommand{},
+	"br":    brCommand{},
+	"todos": todoCommand{},
 }
 
 type commandLine struct {
@@ -32,7 +34,8 @@ type commandLine struct {
 	Completion struct {
 		Shell string `arg:"" optional:"" help:"Target shell (bash or zsh)."`
 	} `cmd:"" help:"Print shell completion script."`
-	Br struct{} `cmd:"" help:"Manage worktrees."`
+	Br    struct{} `cmd:"" help:"Manage worktrees."`
+	Todos struct{} `cmd:"" help:"Quick per-repo todo list."`
 }
 
 func Execute(args []string, stdout, stderr io.Writer) error {
@@ -100,6 +103,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  br            Manage worktrees")
 	fmt.Fprintln(w, "  completion    Print shell completion script")
 	fmt.Fprintln(w, "  help          Show this help message")
+	fmt.Fprintln(w, "  todos         Quick per-repo todo list")
 	fmt.Fprintln(w, "  update        Update fitz to the latest release")
 	fmt.Fprintln(w, "  version       Print version information")
 }
@@ -207,4 +211,30 @@ func currentVersion() string {
 		return "dev"
 	}
 	return Version
+}
+
+type todoCommand struct{}
+
+func (todoCommand) Help(w io.Writer) {
+	fmt.Fprintln(w, "Usage: fitz todos <command>")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  <text>    Add a new todo item")
+	fmt.Fprintln(w, "  help      Show this help message")
+	fmt.Fprintln(w, "  list      Interactive todo list")
+}
+
+func (t todoCommand) Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		t.Help(stdout)
+		return nil
+	}
+
+	switch args[0] {
+	case "list":
+		return cliapp.TodoList(ctx, os.Stdin, stdout)
+	default:
+		text := strings.Join(args, " ")
+		return cliapp.TodoAdd(ctx, stdout, text)
+	}
 }

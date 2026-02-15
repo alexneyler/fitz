@@ -199,7 +199,7 @@ _fitz_completion() {
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
   if [[ ${COMP_CWORD} -eq 1 ]]; then
-    COMPREPLY=( $(compgen -W "help version update completion br" -- "$cur") )
+    COMPREPLY=( $(compgen -W "help version update completion br todos" -- "$cur") )
     return
   fi
 
@@ -210,6 +210,11 @@ _fitz_completion() {
 
   if [[ ${COMP_CWORD} -eq 2 && "$prev" == "br" ]]; then
     COMPREPLY=( $(compgen -W "new go rm list cd help" -- "$cur") )
+    return
+  fi
+
+  if [[ ${COMP_CWORD} -eq 2 && "$prev" == "todos" ]]; then
+    COMPREPLY=( $(compgen -W "list help" -- "$cur") )
     return
   fi
 }
@@ -229,10 +234,11 @@ fitz() {
 }
 
 _fitz() {
-  local -a commands shells br_cmds
-  commands=(help version update completion br)
+  local -a commands shells br_cmds todos_cmds
+  commands=(help version update completion br todos)
   shells=(bash zsh)
   br_cmds=(new go rm list cd help)
+  todos_cmds=(list help)
 
   if (( CURRENT == 2 )); then
     compadd -- $commands
@@ -246,6 +252,11 @@ _fitz() {
 
   if (( CURRENT == 3 )) && [[ "${words[2]}" == "br" ]]; then
     compadd -- $br_cmds
+    return
+  fi
+
+  if (( CURRENT == 3 )) && [[ "${words[2]}" == "todos" ]]; then
+    compadd -- $todos_cmds
     return
   fi
 }
