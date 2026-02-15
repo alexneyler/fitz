@@ -37,7 +37,7 @@ var runBackground = func(binary string, args []string, dir string) error {
 	return cmd.Start()
 }
 
-func BrNew(ctx context.Context, w io.Writer, name, prompt string) error {
+func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("get working directory: %w", err)
@@ -46,7 +46,7 @@ func BrNew(ctx context.Context, w io.Writer, name, prompt string) error {
 	git := worktree.ShellGit{}
 	mgr := &worktree.Manager{Git: git}
 
-	path, err := mgr.Create(cwd, name, "")
+	path, err := mgr.Create(cwd, name, base)
 	if err != nil {
 		return fmt.Errorf("create worktree: %w", err)
 	}

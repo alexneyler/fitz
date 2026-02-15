@@ -108,6 +108,32 @@ func isHelpArg(s string) bool {
 	return s == "help" || s == "--help" || s == "-h"
 }
 
+// parseBrNewArgs extracts name, --base value, and optional prompt from
+// the arguments after "new".  Returns an error when required values are
+// missing.
+func parseBrNewArgs(args []string) (name, base, prompt string, err error) {
+	var positional []string
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--base" {
+			i++
+			if i >= len(args) {
+				return "", "", "", fmt.Errorf("usage: fitz br new [--base <branch>] <name> [prompt]")
+			}
+			base = args[i]
+		} else {
+			positional = append(positional, args[i])
+		}
+	}
+	if len(positional) == 0 {
+		return "", "", "", fmt.Errorf("usage: fitz br new [--base <branch>] <name> [prompt]")
+	}
+	name = positional[0]
+	if len(positional) > 1 {
+		prompt = positional[1]
+	}
+	return name, base, prompt, nil
+}
+
 type brCommand struct{}
 
 func (brCommand) Help(w io.Writer) {
@@ -118,7 +144,7 @@ func (brCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "  go      Switch to an existing worktree")
 	fmt.Fprintln(w, "  help    Show this help message")
 	fmt.Fprintln(w, "  list    List all worktrees")
-	fmt.Fprintln(w, "  new     Create a new worktree (optionally with a prompt)")
+	fmt.Fprintln(w, "  new     Create a new worktree (optionally with --base and/or prompt)")
 	fmt.Fprintln(w, "  rm      Remove a worktree")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run with no command to show the current worktree.")
@@ -132,15 +158,11 @@ func (b brCommand) Run(ctx context.Context, args []string, stdout, stderr io.Wri
 	subcommand := args[0]
 	switch subcommand {
 	case "new":
-		if len(args) < 2 {
-			return fmt.Errorf("usage: fitz br new <name> [prompt]")
+		name, base, prompt, err := parseBrNewArgs(args[1:])
+		if err != nil {
+			return err
 		}
-		name := args[1]
-		prompt := ""
-		if len(args) > 2 {
-			prompt = args[2]
-		}
-		return cliapp.BrNew(ctx, stdout, name, prompt)
+		return cliapp.BrNew(ctx, stdout, name, base, prompt)
 
 	case "go":
 		if len(args) < 2 {
