@@ -9,11 +9,14 @@ define asset_name
 $(BINARY)_$(1)_$(2)$(if $(filter windows,$(1)),.exe,)
 endef
 
-.PHONY: build release-local release clean fmt fmt-check vet lint test
+.PHONY: build run release-local release clean fmt fmt-check vet lint test
 
 build:
 	@mkdir -p bin
 	go build -o bin/$(BINARY) $(PKG)
+
+run: build
+	@./bin/$(BINARY) $(ARGS)
 
 release-local:
 	@mkdir -p $(DIST_DIR)
