@@ -15,3 +15,6 @@ Contributor and agent workflow for this repo:
    ```
 
 Keep changes minimal, and do not commit until lint and tests are both passing.
+
+## Planning
+Keep in mind the principles outlined in `docs/PRINCIPLES.md` when making any plans
