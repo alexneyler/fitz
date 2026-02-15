@@ -30,13 +30,13 @@
   - Example: `fitz br cd feature-login`
 - `fitz br help` — show br usage and available subcommands.
   - Example: `fitz br help`
-- `fitz todo <text>` — add a new todo item for the current repo.
-  - Example: `fitz todo "fix the login bug"`
-  - Example: `fitz todo remember to update docs`
-- `fitz todo list` — interactive TUI to view todos and mark them done.
-  - Example: `fitz todo list`
-- `fitz todo help` — show todo usage and available subcommands.
-  - Example: `fitz todo help`
+- `fitz todos <text>` — add a new todo item for the current repo.
+  - Example: `fitz todos "fix the login bug"`
+  - Example: `fitz todos remember to update docs`
+- `fitz todos list` — interactive TUI to view todos and mark them done.
+  - Example: `fitz todos list`
+- `fitz todos help` — show todo usage and available subcommands.
+  - Example: `fitz todos help`
 
 ## Help output
 
@@ -50,7 +50,7 @@ Commands:
   br            Manage worktrees
   completion    Print shell completion script
   help          Show this help message
-  todo          Quick per-repo todo list
+  todos         Quick per-repo todo list
   update        Update fitz to the latest release
   version       Print version information
 ```

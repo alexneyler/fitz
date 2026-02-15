@@ -24,8 +24,8 @@ type Subcommand interface {
 
 // All commands with sub-subcommands must be registered here.
 var subcommands = map[string]Subcommand{
-	"br":   brCommand{},
-	"todo": todoCommand{},
+	"br":    brCommand{},
+	"todos": todoCommand{},
 }
 
 type commandLine struct {
@@ -34,8 +34,8 @@ type commandLine struct {
 	Completion struct {
 		Shell string `arg:"" optional:"" help:"Target shell (bash or zsh)."`
 	} `cmd:"" help:"Print shell completion script."`
-	Br   struct{} `cmd:"" help:"Manage worktrees."`
-	Todo struct{} `cmd:"" help:"Quick per-repo todo list."`
+	Br    struct{} `cmd:"" help:"Manage worktrees."`
+	Todos struct{} `cmd:"" help:"Quick per-repo todo list."`
 }
 
 func Execute(args []string, stdout, stderr io.Writer) error {
@@ -103,7 +103,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  br            Manage worktrees")
 	fmt.Fprintln(w, "  completion    Print shell completion script")
 	fmt.Fprintln(w, "  help          Show this help message")
-	fmt.Fprintln(w, "  todo          Quick per-repo todo list")
+	fmt.Fprintln(w, "  todos         Quick per-repo todo list")
 	fmt.Fprintln(w, "  update        Update fitz to the latest release")
 	fmt.Fprintln(w, "  version       Print version information")
 }
@@ -194,7 +194,7 @@ func currentVersion() string {
 type todoCommand struct{}
 
 func (todoCommand) Help(w io.Writer) {
-	fmt.Fprintln(w, "Usage: fitz todo <command>")
+	fmt.Fprintln(w, "Usage: fitz todos <command>")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  <text>    Add a new todo item")
