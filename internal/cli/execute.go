@@ -87,6 +87,20 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  version       Print version information")
 }
 
+func printBrUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: fitz br <command>")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  cd      Print the path to a worktree")
+	fmt.Fprintln(w, "  go      Switch to an existing worktree")
+	fmt.Fprintln(w, "  help    Show this help message")
+	fmt.Fprintln(w, "  list    List all worktrees")
+	fmt.Fprintln(w, "  new     Create a new worktree")
+	fmt.Fprintln(w, "  rm      Remove a worktree")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Run with no command to show the current worktree.")
+}
+
 func handleBr(args []string, stdout, stderr io.Writer) error {
 	ctx := context.Background()
 
@@ -96,6 +110,10 @@ func handleBr(args []string, stdout, stderr io.Writer) error {
 
 	subcommand := args[0]
 	switch subcommand {
+	case "help", "--help", "-h":
+		printBrUsage(stdout)
+		return nil
+
 	case "new":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: fitz br new <name> [base]")
@@ -140,6 +158,7 @@ func handleBr(args []string, stdout, stderr io.Writer) error {
 		return cliapp.BrCd(ctx, stdout, args[1])
 
 	default:
+		printBrUsage(stderr)
 		return fmt.Errorf("unknown br subcommand: %s", subcommand)
 	}
 }

@@ -16,5 +16,8 @@ Contributor and agent workflow for this repo:
 
 Keep changes minimal, and do not commit until lint and tests are both passing.
 
+## Command conventions
+Every subcommand that accepts its own sub-subcommands **must** expose a `help` sub-subcommand (and also accept `--help` / `-h`) that prints usage and lists available options. See `handleBr` in `internal/cli/execute.go` for the reference pattern.
+
 ## Planning
 Keep in mind the principles outlined in `docs/PRINCIPLES.md` when making any plans

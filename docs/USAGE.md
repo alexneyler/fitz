@@ -28,6 +28,8 @@
   - Example: `fitz br list`
 - `fitz br cd <name>` — print the path to a worktree (for shell integration).
   - Example: `fitz br cd feature-login`
+- `fitz br help` — show br usage and available subcommands.
+  - Example: `fitz br help`
 
 ## Help output
 

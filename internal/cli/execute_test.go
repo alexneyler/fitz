@@ -107,6 +107,36 @@ func TestExecuteBrCommands(t *testing.T) {
 	}
 }
 
+func TestExecuteBrHelp(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "br help", args: []string{"br", "help"}},
+		{name: "br --help", args: []string{"br", "--help"}},
+		{name: "br -h", args: []string{"br", "-h"}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			err := Execute(tc.args, &out, &errOut)
+			if err != nil {
+				t.Fatalf("Execute returned error: %v", err)
+			}
+			if !strings.Contains(out.String(), "Usage: fitz br <command>") {
+				t.Fatalf("stdout = %q, want usage header", out.String())
+			}
+			if !strings.Contains(out.String(), "new") {
+				t.Fatalf("stdout = %q, want 'new' command listed", out.String())
+			}
+			if !strings.Contains(out.String(), "list") {
+				t.Fatalf("stdout = %q, want 'list' command listed", out.String())
+			}
+		})
+	}
+}
+
 func TestExecuteBrRmExtraArgs(t *testing.T) {
 	tests := []struct {
 		name    string
