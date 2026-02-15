@@ -14,6 +14,20 @@
   - Example: `fitz completion bash`
 - `fitz completion zsh` — prints zsh completion script.
   - Example: `fitz completion zsh`
+- `fitz br` — show the current worktree.
+  - Example: `fitz br`
+- `fitz br new <name> [base]` — create a new worktree from an optional base branch.
+  - Example: `fitz br new feature-login`
+  - Example: `fitz br new feature-auth main`
+- `fitz br go <name>` — switch to an existing worktree.
+  - Example: `fitz br go feature-login`
+- `fitz br rm <name> [--force]` — remove a worktree (optionally force removal).
+  - Example: `fitz br rm feature-login`
+  - Example: `fitz br rm feature-login --force`
+- `fitz br list` — list all worktrees.
+  - Example: `fitz br list`
+- `fitz br cd <name>` — print the path to a worktree (for shell integration).
+  - Example: `fitz br cd feature-login`
 
 ## Help output
 
@@ -21,5 +35,5 @@
 
 ```text
 fitz <version>
-Usage: fitz <help|version|update|completion>
+Usage: fitz <help|version|update|completion|br>
 ```

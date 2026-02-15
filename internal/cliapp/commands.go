@@ -184,18 +184,32 @@ func Completion(_ context.Context, w io.Writer, args []string) error {
 	return err
 }
 
-const bashCompletionScript = `_fitz_completion() {
+const bashCompletionScript = `fitz() {
+  if [[ "$1" == "br" && "$2" == "cd" && -n "$3" ]]; then
+    local dir
+    dir="$(command fitz br cd "$3")" && cd "$dir"
+  else
+    command fitz "$@"
+  fi
+}
+
+_fitz_completion() {
   local cur prev
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
   if [[ ${COMP_CWORD} -eq 1 ]]; then
-    COMPREPLY=( $(compgen -W "help version update completion" -- "$cur") )
+    COMPREPLY=( $(compgen -W "help version update completion br" -- "$cur") )
     return
   fi
 
   if [[ ${COMP_CWORD} -eq 2 && "$prev" == "completion" ]]; then
     COMPREPLY=( $(compgen -W "bash zsh" -- "$cur") )
+    return
+  fi
+
+  if [[ ${COMP_CWORD} -eq 2 && "$prev" == "br" ]]; then
+    COMPREPLY=( $(compgen -W "new go rm list cd" -- "$cur") )
     return
   fi
 }
@@ -205,10 +219,20 @@ complete -F _fitz_completion fitz
 
 const zshCompletionScript = `#compdef fitz
 
+fitz() {
+  if [[ "$1" == "br" && "$2" == "cd" && -n "$3" ]]; then
+    local dir
+    dir="$(command fitz br cd "$3")" && cd "$dir"
+  else
+    command fitz "$@"
+  fi
+}
+
 _fitz() {
-  local -a commands shells
-  commands=(help version update completion)
+  local -a commands shells br_cmds
+  commands=(help version update completion br)
   shells=(bash zsh)
+  br_cmds=(new go rm list cd)
 
   if (( CURRENT == 2 )); then
     compadd -- $commands
@@ -217,6 +241,11 @@ _fitz() {
 
   if (( CURRENT == 3 )) && [[ "${words[2]}" == "completion" ]]; then
     compadd -- $shells
+    return
+  fi
+
+  if (( CURRENT == 3 )) && [[ "${words[2]}" == "br" ]]; then
+    compadd -- $br_cmds
     return
   fi
 }

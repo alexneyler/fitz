@@ -40,7 +40,7 @@ func TestExecuteKnownCommands(t *testing.T) {
 			if !strings.Contains(out.String(), tc.want) {
 				t.Fatalf("stdout = %q, want substring %q", out.String(), tc.want)
 			}
-			if tc.name == "help" && !strings.Contains(out.String(), "Usage: fitz <help|version|update|completion>") {
+			if tc.name == "help" && !strings.Contains(out.String(), "Usage: fitz <help|version|update|completion|br>") {
 				t.Fatalf("stdout = %q, want usage", out.String())
 			}
 		})
@@ -56,7 +56,7 @@ func TestExecuteUnknownCommand(t *testing.T) {
 	if !strings.Contains(errOut.String(), "fitz dev") {
 		t.Fatalf("stderr = %q, want version", errOut.String())
 	}
-	if !strings.Contains(errOut.String(), "Usage: fitz <help|version|update|completion>") {
+	if !strings.Contains(errOut.String(), "Usage: fitz <help|version|update|completion|br>") {
 		t.Fatalf("stderr = %q, want usage", errOut.String())
 	}
 }
@@ -72,5 +72,78 @@ func TestExecuteCompletionWithoutShell(t *testing.T) {
 	}
 	if out.Len() != 0 {
 		t.Fatalf("stdout = %q, want empty", out.String())
+	}
+}
+
+func TestExecuteBrCommands(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{name: "br no args", args: []string{"br"}, wantErr: false},
+		{name: "br list", args: []string{"br", "list"}, wantErr: false},
+		{name: "br new missing name", args: []string{"br", "new"}, wantErr: true},
+		{name: "br go missing name", args: []string{"br", "go"}, wantErr: true},
+		{name: "br rm missing name", args: []string{"br", "rm"}, wantErr: true},
+		{name: "br cd missing name", args: []string{"br", "cd"}, wantErr: true},
+		{name: "br unknown subcommand", args: []string{"br", "wat"}, wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			err := Execute(tc.args, &out, &errOut)
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestExecuteBrRmExtraArgs(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "br rm with unknown flag",
+			args:    []string{"br", "rm", "foo", "--oops"},
+			wantErr: true,
+			errMsg:  "usage: fitz br rm <name> [--force]",
+		},
+		{
+			name:    "br rm with two names",
+			args:    []string{"br", "rm", "foo", "bar"},
+			wantErr: true,
+			errMsg:  "usage: fitz br rm <name> [--force]",
+		},
+		{
+			name:    "br rm with too many args",
+			args:    []string{"br", "rm", "foo", "--force", "extra"},
+			wantErr: true,
+			errMsg:  "usage: fitz br rm <name> [--force]",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			err := Execute(tc.args, &out, &errOut)
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tc.wantErr && tc.errMsg != "" && !strings.Contains(err.Error(), tc.errMsg) {
+				t.Errorf("error = %q, want substring %q", err.Error(), tc.errMsg)
+			}
+		})
 	}
 }
