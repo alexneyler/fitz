@@ -1,6 +1,7 @@
 package worktree
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -487,6 +488,53 @@ func TestManagerPathSlashName(t *testing.T) {
 	want := "/home/user/.fitz/owner/repo/feat-login"
 	if path != want {
 		t.Errorf("path = %q, want %q", path, want)
+	}
+}
+
+func TestFormatList(t *testing.T) {
+	list := []WorktreeInfo{
+		{Path: "/repo/main", Branch: "main", Name: "main"},
+		{Path: "/home/.fitz/o/r/feature", Branch: "feature", Name: "feature"},
+		{Path: "/home/.fitz/o/r/feat-login", Branch: "feat/login", Name: "feat-login"},
+		{Path: "/home/.fitz/o/r/detached", Branch: "", Name: "detached"},
+	}
+
+	tests := []struct {
+		name    string
+		current string
+		want    string
+	}{
+		{
+			name:    "current is root",
+			current: "root",
+			want:    "\x1b[34m* root\x1b[0m\n  feature\n  feat/login\n  detached\n",
+		},
+		{
+			name:    "current is feature",
+			current: "feature",
+			want:    "  root\n\x1b[34m* feature\x1b[0m\n  feat/login\n  detached\n",
+		},
+		{
+			name:    "current is slash branch",
+			current: "feat-login",
+			want:    "  root\n  feature\n\x1b[34m* feat/login\x1b[0m\n  detached\n",
+		},
+		{
+			name:    "no current match",
+			current: "other",
+			want:    "  root\n  feature\n  feat/login\n  detached\n",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			FormatList(&buf, list, tc.current)
+			got := buf.String()
+			if got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 

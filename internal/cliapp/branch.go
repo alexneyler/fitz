@@ -126,19 +126,17 @@ func BrList(ctx context.Context, w io.Writer) error {
 	git := worktree.ShellGit{}
 	mgr := &worktree.Manager{Git: git}
 
+	current, err := mgr.Current(cwd)
+	if err != nil {
+		return fmt.Errorf("get current worktree: %w", err)
+	}
+
 	list, err := mgr.List(cwd)
 	if err != nil {
 		return fmt.Errorf("list worktrees: %w", err)
 	}
 
-	for _, wt := range list {
-		branch := wt.Branch
-		if branch == "" {
-			branch = "(detached)"
-		}
-		fmt.Fprintf(w, "%s\t%s\n", wt.Name, branch)
-	}
-
+	worktree.FormatList(w, list, current)
 	return nil
 }
 
