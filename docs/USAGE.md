@@ -16,9 +16,9 @@
   - Example: `fitz completion zsh`
 - `fitz br` — show the current worktree.
   - Example: `fitz br`
-- `fitz br new <name> [base]` — create a new worktree from an optional base branch.
+- `fitz br new <name> [prompt]` — create a new worktree. If a prompt is given, copilot launches in the background with `--yolo -p "<prompt>"`.
   - Example: `fitz br new feature-login`
-  - Example: `fitz br new feature-auth main`
+  - Example: `fitz br new feature-login "implement user authentication"`
 - `fitz br go <name>` — switch to an existing worktree.
   - Example: `fitz br go feature-login`
 - `fitz br rm <name> [--force]` — remove a worktree (optionally force removal).

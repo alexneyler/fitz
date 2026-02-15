@@ -118,7 +118,7 @@ func (brCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "  go      Switch to an existing worktree")
 	fmt.Fprintln(w, "  help    Show this help message")
 	fmt.Fprintln(w, "  list    List all worktrees")
-	fmt.Fprintln(w, "  new     Create a new worktree")
+	fmt.Fprintln(w, "  new     Create a new worktree (optionally with a prompt)")
 	fmt.Fprintln(w, "  rm      Remove a worktree")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run with no command to show the current worktree.")
@@ -133,14 +133,14 @@ func (b brCommand) Run(ctx context.Context, args []string, stdout, stderr io.Wri
 	switch subcommand {
 	case "new":
 		if len(args) < 2 {
-			return fmt.Errorf("usage: fitz br new <name> [base]")
+			return fmt.Errorf("usage: fitz br new <name> [prompt]")
 		}
 		name := args[1]
-		base := ""
+		prompt := ""
 		if len(args) > 2 {
-			base = args[2]
+			prompt = args[2]
 		}
-		return cliapp.BrNew(ctx, stdout, name, base)
+		return cliapp.BrNew(ctx, stdout, name, prompt)
 
 	case "go":
 		if len(args) < 2 {
