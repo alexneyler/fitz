@@ -35,5 +35,12 @@
 
 ```text
 fitz <version>
-Usage: fitz <help|version|update|completion|br>
+Usage: fitz <command>
+
+Commands:
+  br            Manage worktrees
+  completion    Print shell completion script
+  help          Show this help message
+  update        Update fitz to the latest release
+  version       Print version information
 ```

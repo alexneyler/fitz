@@ -77,7 +77,14 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 
 func printUsage(w io.Writer) {
 	fmt.Fprintf(w, "fitz %s\n", currentVersion())
-	fmt.Fprintln(w, "Usage: fitz <help|version|update|completion|br>")
+	fmt.Fprintln(w, "Usage: fitz <command>")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  br            Manage worktrees")
+	fmt.Fprintln(w, "  completion    Print shell completion script")
+	fmt.Fprintln(w, "  help          Show this help message")
+	fmt.Fprintln(w, "  update        Update fitz to the latest release")
+	fmt.Fprintln(w, "  version       Print version information")
 }
 
 func handleBr(args []string, stdout, stderr io.Writer) error {
