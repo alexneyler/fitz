@@ -43,3 +43,7 @@ ensure_line() {
 
 ensure_line 'export PATH="$HOME/.fitz/bin:$PATH"' "$rc_file"
 ensure_line "$completion_line" "$rc_file"
+
+echo ""
+echo "fitz installed successfully!"
+echo "Run 'source $rc_file' to update your current shell, or open a new terminal."
