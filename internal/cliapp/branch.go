@@ -76,12 +76,8 @@ func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 	return runExec(copilotPath, []string{"copilot"}, os.Environ())
 }
 
-// copilotConfigDir returns the Copilot configuration directory.
-// It respects XDG_CONFIG_HOME if set, otherwise defaults to ~/.copilot.
+// copilotConfigDir returns the Copilot configuration directory (~/.copilot).
 var copilotConfigDir = func() string {
-	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return filepath.Join(d, "copilot")
-	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
