@@ -146,6 +146,7 @@ func TestManagerRemove(t *testing.T) {
 			"/test/repo:remote get-url origin ":                               "https://github.com/owner/repo.git",
 			"/test/repo:worktree remove /home/user/.fitz/owner/repo/feature ": "",
 			"/test/repo:worktree prune ":                                      "",
+			"/test/repo:branch -d feature ":                                   "",
 		},
 		errs: make(map[string]error),
 	}
@@ -162,6 +163,7 @@ func TestManagerRemove(t *testing.T) {
 
 	foundRemove := false
 	foundPrune := false
+	foundBranchDelete := false
 	for _, call := range git.calls {
 		if len(call) > 2 && call[1] == "worktree" && call[2] == "remove" {
 			foundRemove = true
@@ -173,12 +175,21 @@ func TestManagerRemove(t *testing.T) {
 		if len(call) > 2 && call[1] == "worktree" && call[2] == "prune" {
 			foundPrune = true
 		}
+		if len(call) > 2 && call[1] == "branch" && call[2] == "-d" {
+			foundBranchDelete = true
+			if call[3] != "feature" {
+				t.Errorf("branch delete name = %q, want feature", call[3])
+			}
+		}
 	}
 	if !foundRemove {
 		t.Error("expected worktree remove call")
 	}
 	if !foundPrune {
 		t.Error("expected worktree prune call")
+	}
+	if !foundBranchDelete {
+		t.Error("expected branch delete call")
 	}
 }
 
@@ -188,6 +199,7 @@ func TestManagerRemoveForce(t *testing.T) {
 			"/test/repo:remote get-url origin ":                                       "https://github.com/owner/repo.git",
 			"/test/repo:worktree remove /home/user/.fitz/owner/repo/feature --force ": "",
 			"/test/repo:worktree prune ":                                              "",
+			"/test/repo:branch -D feature ":                                           "",
 		},
 		errs: make(map[string]error),
 	}
@@ -202,17 +214,27 @@ func TestManagerRemoveForce(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	found := false
+	foundWorktreeRemove := false
+	foundBranchDelete := false
 	for _, call := range git.calls {
 		if len(call) > 2 && call[1] == "worktree" && call[2] == "remove" {
-			found = true
+			foundWorktreeRemove = true
 			if call[4] != "--force" {
 				t.Errorf("expected --force flag")
 			}
 		}
+		if len(call) > 2 && call[1] == "branch" && call[2] == "-D" {
+			foundBranchDelete = true
+			if call[3] != "feature" {
+				t.Errorf("branch delete name = %q, want feature", call[3])
+			}
+		}
 	}
-	if !found {
+	if !foundWorktreeRemove {
 		t.Error("expected worktree remove call")
+	}
+	if !foundBranchDelete {
+		t.Error("expected branch -D call with force")
 	}
 }
 
@@ -535,6 +557,122 @@ func TestFormatList(t *testing.T) {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestManagerRemoveAll(t *testing.T) {
+	porcelain := `worktree /repo/main
+HEAD abc123
+branch refs/heads/main
+
+worktree /home/user/.fitz/owner/repo/feature
+HEAD def456
+branch refs/heads/feature
+
+worktree /home/user/.fitz/owner/repo/bugfix
+HEAD ghi789
+branch refs/heads/bugfix
+`
+
+	git := &mockGit{
+		outputs: map[string]string{
+			"/test/repo:remote get-url origin ":                               "https://github.com/owner/repo.git",
+			"/test/repo:worktree list --porcelain ":                           porcelain,
+			"/test/repo:worktree remove /home/user/.fitz/owner/repo/feature ": "",
+			"/test/repo:worktree remove /home/user/.fitz/owner/repo/bugfix ":  "",
+			"/test/repo:worktree prune ":                                      "",
+			"/test/repo:branch -d feature ":                                   "",
+			"/test/repo:branch -d bugfix ":                                    "",
+		},
+		errs: make(map[string]error),
+	}
+
+	m := &Manager{
+		Git:     git,
+		HomeDir: "/home/user",
+	}
+
+	removed, err := m.RemoveAll("/test/repo", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(removed) != 2 {
+		t.Fatalf("expected 2 removed, got %d", len(removed))
+	}
+
+	want := map[string]bool{"feature": true, "bugfix": true}
+	for _, name := range removed {
+		if !want[name] {
+			t.Errorf("unexpected removed name: %s", name)
+		}
+	}
+}
+
+func TestManagerRemoveAllForce(t *testing.T) {
+	porcelain := `worktree /repo/main
+HEAD abc123
+branch refs/heads/main
+
+worktree /home/user/.fitz/owner/repo/feature
+HEAD def456
+branch refs/heads/feature
+`
+
+	git := &mockGit{
+		outputs: map[string]string{
+			"/test/repo:remote get-url origin ":                                       "https://github.com/owner/repo.git",
+			"/test/repo:worktree list --porcelain ":                                   porcelain,
+			"/test/repo:worktree remove /home/user/.fitz/owner/repo/feature --force ": "",
+			"/test/repo:worktree prune ":                                              "",
+			"/test/repo:branch -D feature ":                                           "",
+		},
+		errs: make(map[string]error),
+	}
+
+	m := &Manager{
+		Git:     git,
+		HomeDir: "/home/user",
+	}
+
+	removed, err := m.RemoveAll("/test/repo", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(removed) != 1 {
+		t.Fatalf("expected 1 removed, got %d", len(removed))
+	}
+	if removed[0] != "feature" {
+		t.Errorf("removed[0] = %q, want feature", removed[0])
+	}
+}
+
+func TestManagerRemoveAllNoWorktrees(t *testing.T) {
+	porcelain := `worktree /repo/main
+HEAD abc123
+branch refs/heads/main
+`
+
+	git := &mockGit{
+		outputs: map[string]string{
+			"/test/repo:worktree list --porcelain ": porcelain,
+		},
+		errs: make(map[string]error),
+	}
+
+	m := &Manager{
+		Git:     git,
+		HomeDir: "/home/user",
+	}
+
+	removed, err := m.RemoveAll("/test/repo", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(removed) != 0 {
+		t.Fatalf("expected 0 removed, got %d", len(removed))
 	}
 }
 

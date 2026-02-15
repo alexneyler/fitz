@@ -16,7 +16,8 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
   - `fitz br` — show current worktree.
   - `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. If a prompt is given (one or more words), copilot runs in the background with `--yolo`.
   - `fitz br go <name>` — switch to a worktree.
-  - `fitz br rm <name> [--force]` — remove a worktree.
+  - `fitz br rm <name> [--force]` — remove a worktree and its branch.
+  - `fitz br rm --all [--force]` — remove all worktrees and their branches.
   - `fitz br list` — list all worktrees (current highlighted with `*`).
   - `fitz br cd <name>` — print the path to a worktree (for shell integration).
   - `fitz br help` — show br usage and available subcommands.

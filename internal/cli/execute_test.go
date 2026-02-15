@@ -195,6 +195,12 @@ func TestExecuteBrRmExtraArgs(t *testing.T) {
 			wantErr: true,
 			errMsg:  "usage: fitz br rm <name> [--force]",
 		},
+		{
+			name:    "br rm --all with name",
+			args:    []string{"br", "rm", "--all", "foo"},
+			wantErr: true,
+			errMsg:  "usage: fitz br rm",
+		},
 	}
 
 	for _, tc := range tests {
