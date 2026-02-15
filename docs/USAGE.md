@@ -26,7 +26,7 @@
 - `fitz br rm <name> [--force]` — remove a worktree (optionally force removal).
   - Example: `fitz br rm feature-login`
   - Example: `fitz br rm feature-login --force`
-- `fitz br list` — list all worktrees.
+- `fitz br list` — list all worktrees. The current worktree (or root) is highlighted in blue with a `*` prefix.
   - Example: `fitz br list`
 - `fitz br cd <name>` — print the path to a worktree (for shell integration).
   - Example: `fitz br cd feature-login`

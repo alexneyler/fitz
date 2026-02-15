@@ -3,6 +3,7 @@ package worktree
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -202,6 +203,31 @@ func (m *Manager) Current(dir string) (string, error) {
 	}
 
 	return "root", nil
+}
+
+// FormatList writes the worktree list to w, highlighting the current worktree
+// with a blue "* " prefix. The first entry is always labeled "root". Others
+// show their branch name (or directory name if detached). current should be
+// "root" or a worktree Name (directory basename) as returned by Current().
+func FormatList(w io.Writer, list []WorktreeInfo, current string) {
+	const blue = "\x1b[34m"
+	const reset = "\x1b[0m"
+
+	for i, wt := range list {
+		name := wt.Branch
+		if i == 0 {
+			name = "root"
+		} else if name == "" {
+			name = wt.Name
+		}
+
+		isCurrent := (i == 0 && current == "root") || (i > 0 && current == wt.Name)
+		if isCurrent {
+			fmt.Fprintf(w, "%s* %s%s\n", blue, name, reset)
+		} else {
+			fmt.Fprintf(w, "  %s\n", name)
+		}
+	}
 }
 
 func parseWorktreeList(output string) []WorktreeInfo {
