@@ -138,6 +138,8 @@ func TestParseBrNewArgs(t *testing.T) {
 		{name: "base flag before name", args: []string{"new", "--base", "develop", "feat"}, wantName: "feat", wantBase: "develop"},
 		{name: "base flag after name", args: []string{"new", "feat", "--base", "develop"}, wantName: "feat", wantBase: "develop"},
 		{name: "base flag with prompt", args: []string{"new", "--base", "develop", "feat", "do stuff"}, wantName: "feat", wantBase: "develop", wantPrompt: "do stuff"},
+		{name: "multi-word prompt unquoted", args: []string{"new", "feat", "fix", "the", "bug"}, wantName: "feat", wantPrompt: "fix the bug"},
+		{name: "multi-word prompt with base", args: []string{"new", "--base", "develop", "feat", "fix", "the", "bug"}, wantName: "feat", wantBase: "develop", wantPrompt: "fix the bug"},
 		{name: "missing name", args: []string{"new"}, wantErr: true},
 		{name: "base flag missing value", args: []string{"new", "--base"}, wantErr: true},
 		{name: "base flag missing value then name", args: []string{"new", "feat", "--base"}, wantErr: true},

@@ -117,7 +117,7 @@ func parseBrNewArgs(args []string) (name, base, prompt string, err error) {
 		if args[i] == "--base" {
 			i++
 			if i >= len(args) {
-				return "", "", "", fmt.Errorf("usage: fitz br new [--base <branch>] <name> [prompt]")
+				return "", "", "", fmt.Errorf("usage: fitz br new [--base <branch>] <name> [prompt...]")
 			}
 			base = args[i]
 		} else {
@@ -125,11 +125,11 @@ func parseBrNewArgs(args []string) (name, base, prompt string, err error) {
 		}
 	}
 	if len(positional) == 0 {
-		return "", "", "", fmt.Errorf("usage: fitz br new [--base <branch>] <name> [prompt]")
+		return "", "", "", fmt.Errorf("usage: fitz br new [--base <branch>] <name> [prompt...]")
 	}
 	name = positional[0]
 	if len(positional) > 1 {
-		prompt = positional[1]
+		prompt = strings.Join(positional[1:], " ")
 	}
 	return name, base, prompt, nil
 }
