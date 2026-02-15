@@ -40,8 +40,11 @@ func TestExecuteKnownCommands(t *testing.T) {
 			if !strings.Contains(out.String(), tc.want) {
 				t.Fatalf("stdout = %q, want substring %q", out.String(), tc.want)
 			}
-			if tc.name == "help" && !strings.Contains(out.String(), "Usage: fitz <help|version|update|completion|br>") {
-				t.Fatalf("stdout = %q, want usage", out.String())
+			if tc.name == "help" && !strings.Contains(out.String(), "Usage: fitz <command>") {
+				t.Fatalf("stdout = %q, want usage header", out.String())
+			}
+			if tc.name == "help" && !strings.Contains(out.String(), "br") {
+				t.Fatalf("stdout = %q, want br command listed", out.String())
 			}
 		})
 	}
@@ -56,8 +59,8 @@ func TestExecuteUnknownCommand(t *testing.T) {
 	if !strings.Contains(errOut.String(), "fitz dev") {
 		t.Fatalf("stderr = %q, want version", errOut.String())
 	}
-	if !strings.Contains(errOut.String(), "Usage: fitz <help|version|update|completion|br>") {
-		t.Fatalf("stderr = %q, want usage", errOut.String())
+	if !strings.Contains(errOut.String(), "Usage: fitz <command>") {
+		t.Fatalf("stderr = %q, want usage header", errOut.String())
 	}
 }
 
