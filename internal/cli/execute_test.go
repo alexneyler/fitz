@@ -124,6 +124,50 @@ func TestAllSubcommandsHandleHelp(t *testing.T) {
 	}
 }
 
+func TestParseBrNewArgs(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		wantName   string
+		wantBase   string
+		wantPrompt string
+		wantErr    bool
+	}{
+		{name: "name only", args: []string{"new", "feat"}, wantName: "feat"},
+		{name: "name and prompt", args: []string{"new", "feat", "do stuff"}, wantName: "feat", wantPrompt: "do stuff"},
+		{name: "base flag before name", args: []string{"new", "--base", "develop", "feat"}, wantName: "feat", wantBase: "develop"},
+		{name: "base flag after name", args: []string{"new", "feat", "--base", "develop"}, wantName: "feat", wantBase: "develop"},
+		{name: "base flag with prompt", args: []string{"new", "--base", "develop", "feat", "do stuff"}, wantName: "feat", wantBase: "develop", wantPrompt: "do stuff"},
+		{name: "missing name", args: []string{"new"}, wantErr: true},
+		{name: "base flag missing value", args: []string{"new", "--base"}, wantErr: true},
+		{name: "base flag missing value then name", args: []string{"new", "feat", "--base"}, wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			name, base, prompt, err := parseBrNewArgs(tc.args[1:])
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if name != tc.wantName {
+				t.Errorf("name = %q, want %q", name, tc.wantName)
+			}
+			if base != tc.wantBase {
+				t.Errorf("base = %q, want %q", base, tc.wantBase)
+			}
+			if prompt != tc.wantPrompt {
+				t.Errorf("prompt = %q, want %q", prompt, tc.wantPrompt)
+			}
+		})
+	}
+}
+
 func TestExecuteBrRmExtraArgs(t *testing.T) {
 	tests := []struct {
 		name    string

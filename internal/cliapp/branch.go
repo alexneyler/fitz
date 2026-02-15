@@ -28,7 +28,16 @@ var runExec = func(binary string, args []string, env []string) error {
 	return syscall.Exec(binary, args, env)
 }
 
-func BrNew(ctx context.Context, w io.Writer, name, base string) error {
+var runBackground = func(binary string, args []string, dir string) error {
+	cmd := exec.Command(binary, args[1:]...)
+	cmd.Dir = dir
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Start()
+}
+
+func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("get working directory: %w", err)
@@ -45,6 +54,17 @@ func BrNew(ctx context.Context, w io.Writer, name, base string) error {
 	copilotPath, err := lookPath("copilot")
 	if err != nil {
 		return errors.New("copilot not found in PATH")
+	}
+
+	if prompt != "" {
+		args := []string{"copilot", "--yolo", "-p", prompt}
+		if err := runBackground(copilotPath, args, path); err != nil {
+			return fmt.Errorf("start copilot: %w", err)
+		}
+		fmt.Fprintf(w, "worktree created: %s\n", name)
+		fmt.Fprintf(w, "copilot is working on it in the background\n")
+		fmt.Fprintf(w, "run `fitz br go %s` to navigate to it\n", name)
+		return nil
 	}
 
 	if err := os.Chdir(path); err != nil {

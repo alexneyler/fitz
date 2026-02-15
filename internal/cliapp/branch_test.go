@@ -69,3 +69,42 @@ func TestRunExecMockable(t *testing.T) {
 		t.Errorf("args = %v, want [copilot --continue]", capturedArgs)
 	}
 }
+
+func TestRunBackgroundMockable(t *testing.T) {
+	originalBg := runBackground
+	t.Cleanup(func() { runBackground = originalBg })
+
+	var capturedBinary string
+	var capturedArgs []string
+	var capturedDir string
+
+	runBackground = func(binary string, args []string, dir string) error {
+		capturedBinary = binary
+		capturedArgs = args
+		capturedDir = dir
+		return nil
+	}
+
+	err := runBackground("/usr/bin/copilot", []string{"copilot", "--yolo", "-p", "do stuff"}, "/tmp/wt")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if capturedBinary != "/usr/bin/copilot" {
+		t.Errorf("binary = %q, want /usr/bin/copilot", capturedBinary)
+	}
+
+	wantArgs := []string{"copilot", "--yolo", "-p", "do stuff"}
+	if len(capturedArgs) != len(wantArgs) {
+		t.Fatalf("args = %v, want %v", capturedArgs, wantArgs)
+	}
+	for i, a := range wantArgs {
+		if capturedArgs[i] != a {
+			t.Errorf("args[%d] = %q, want %q", i, capturedArgs[i], a)
+		}
+	}
+
+	if capturedDir != "/tmp/wt" {
+		t.Errorf("dir = %q, want /tmp/wt", capturedDir)
+	}
+}
