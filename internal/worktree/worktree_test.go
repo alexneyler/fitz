@@ -146,7 +146,7 @@ func TestManagerRemove(t *testing.T) {
 			"/test/repo:remote get-url origin ":                               "https://github.com/owner/repo.git",
 			"/test/repo:worktree remove /home/user/.fitz/owner/repo/feature ": "",
 			"/test/repo:worktree prune ":                                      "",
-			"/test/repo:branch -d feature ":                                   "",
+			"/test/repo:branch -D feature ":                                   "",
 		},
 		errs: make(map[string]error),
 	}
@@ -175,7 +175,7 @@ func TestManagerRemove(t *testing.T) {
 		if len(call) > 2 && call[1] == "worktree" && call[2] == "prune" {
 			foundPrune = true
 		}
-		if len(call) > 2 && call[1] == "branch" && call[2] == "-d" {
+		if len(call) > 2 && call[1] == "branch" && call[2] == "-D" {
 			foundBranchDelete = true
 			if call[3] != "feature" {
 				t.Errorf("branch delete name = %q, want feature", call[3])
@@ -581,8 +581,8 @@ branch refs/heads/bugfix
 			"/test/repo:worktree remove /home/user/.fitz/owner/repo/feature ": "",
 			"/test/repo:worktree remove /home/user/.fitz/owner/repo/bugfix ":  "",
 			"/test/repo:worktree prune ":                                      "",
-			"/test/repo:branch -d feature ":                                   "",
-			"/test/repo:branch -d bugfix ":                                    "",
+			"/test/repo:branch -D feature ":                                   "",
+			"/test/repo:branch -D bugfix ":                                    "",
 		},
 		errs: make(map[string]error),
 	}

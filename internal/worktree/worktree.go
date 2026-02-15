@@ -123,11 +123,7 @@ func (m *Manager) Remove(dir, name string, force bool) error {
 		return err
 	}
 
-	branchFlag := "-d"
-	if force {
-		branchFlag = "-D"
-	}
-	_, err = m.Git.Run(dir, "branch", branchFlag, name)
+	_, err = m.Git.Run(dir, "branch", "-D", name)
 	return err
 }
 
@@ -158,11 +154,7 @@ func (m *Manager) RemoveAll(dir string, force bool) ([]string, error) {
 		}
 
 		if wt.Branch != "" {
-			branchFlag := "-d"
-			if force {
-				branchFlag = "-D"
-			}
-			if _, err := m.Git.Run(dir, "branch", branchFlag, wt.Branch); err != nil {
+			if _, err := m.Git.Run(dir, "branch", "-D", wt.Branch); err != nil {
 				return removed, fmt.Errorf("delete branch %s: %w", wt.Branch, err)
 			}
 		}
