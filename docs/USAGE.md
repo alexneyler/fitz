@@ -39,7 +39,7 @@
 - `fitz todo <text>` — add a new todo item for the current repo.
   - Example: `fitz todo "fix the login bug"`
   - Example: `fitz todo remember to update docs`
-- `fitz todo list` — interactive TUI to view todos and mark them done.
+- `fitz todo list` — interactive TUI: navigate with ↑/↓, press enter to create a worktree from a todo, d to mark done, or add a new todo inline.
   - Example: `fitz todo list`
 - `fitz todo help` — show todo usage and available subcommands.
   - Example: `fitz todo help`

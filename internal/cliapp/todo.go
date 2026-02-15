@@ -11,8 +11,10 @@ import (
 	"fitz/internal/worktree"
 )
 
+var resolveTodoStorePath = resolveTodoPath
+
 func TodoAdd(_ context.Context, w io.Writer, text string) error {
-	storePath, err := resolveTodoPath()
+	storePath, err := resolveTodoStorePath()
 	if err != nil {
 		return err
 	}
@@ -27,7 +29,7 @@ func TodoAdd(_ context.Context, w io.Writer, text string) error {
 }
 
 func TodoList(_ context.Context, stdin io.Reader, stdout io.Writer) error {
-	storePath, err := resolveTodoPath()
+	storePath, err := resolveTodoStorePath()
 	if err != nil {
 		return err
 	}
@@ -44,8 +46,24 @@ func TodoList(_ context.Context, stdin io.Reader, stdout io.Writer) error {
 
 	model := newTodoModel(items, storePath)
 	p := tea.NewProgram(model, tea.WithInput(stdin), tea.WithOutput(stdout))
-	_, err = p.Run()
-	return err
+	finalModel, err := p.Run()
+	if err != nil {
+		return err
+	}
+
+	m, ok := finalModel.(todoModel)
+	if !ok {
+		return nil
+	}
+
+	switch m.result.Action {
+	case ActionGo:
+		return BrNew(context.Background(), stdout, m.result.BranchName, "", "")
+	case ActionKickoff:
+		return BrNew(context.Background(), stdout, m.result.BranchName, "", m.result.Prompt)
+	}
+
+	return nil
 }
 
 func resolveTodoPath() (string, error) {

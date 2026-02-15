@@ -239,7 +239,7 @@ func (todoCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  <text>    Add a new todo item")
 	fmt.Fprintln(w, "  help      Show this help message")
-	fmt.Fprintln(w, "  list      Interactive todo list")
+	fmt.Fprintln(w, "  list      Interactive todo list (enter: create worktree, d: done)")
 }
 
 func (t todoCommand) Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
