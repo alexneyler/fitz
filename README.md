@@ -57,12 +57,15 @@ go run ./cmd/fitz version
 make build
 ./bin/fitz help
 
-# build local release-named artifact
+# build local release-named artifact (version defaults to "dev")
 make release-local
+
+# build with a specific version
+make release-local VERSION=v0.1.0
 ```
 
-For local version testing, inject a version at build time:
+## CI / CD
 
-```sh
-go run -ldflags "-X main.version=v0.0.0-local" ./cmd/fitz version
-```
+PR checks run `make lint` and `make test` on every pull request to `main`.
+
+Pushing a tag like `v1.0.0` triggers a release workflow that cross-compiles all platform binaries and creates a GitHub Release with auto-generated notes.

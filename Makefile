@@ -4,6 +4,8 @@ DIST_DIR := dist
 LOCAL_OS := $(shell go env GOOS)
 LOCAL_ARCH := $(shell go env GOARCH)
 PLATFORMS := darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
+VERSION ?= dev
+LDFLAGS := -s -w -X main.version=$(VERSION)
 
 define asset_name
 $(BINARY)_$(1)_$(2)$(if $(filter windows,$(1)),.exe,)
@@ -20,7 +22,7 @@ run: build
 
 release-local:
 	@mkdir -p $(DIST_DIR)
-	GOOS=$(LOCAL_OS) GOARCH=$(LOCAL_ARCH) go build -o $(DIST_DIR)/$(call asset_name,$(LOCAL_OS),$(LOCAL_ARCH)) $(PKG)
+	GOOS=$(LOCAL_OS) GOARCH=$(LOCAL_ARCH) go build -ldflags '$(LDFLAGS)' -o $(DIST_DIR)/$(call asset_name,$(LOCAL_OS),$(LOCAL_ARCH)) $(PKG)
 
 release:
 	@mkdir -p $(DIST_DIR)
@@ -29,7 +31,7 @@ release:
 		name="$(BINARY)_$${os}_$${arch}"; \
 		if [ "$${os}" = "windows" ]; then name="$$name.exe"; fi; \
 		echo "building $${os}/$${arch}"; \
-		GOOS=$${os} GOARCH=$${arch} go build -o $(DIST_DIR)/$$name $(PKG); \
+		GOOS=$${os} GOARCH=$${arch} go build -ldflags '$(LDFLAGS)' -o $(DIST_DIR)/$$name $(PKG); \
 	done
 
 clean:
