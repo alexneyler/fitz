@@ -22,10 +22,10 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
   - `fitz br help` — show br usage and available subcommands.
 - `fitz completion <bash|zsh>` — print completion script for your shell.
 - `fitz help` — print usage.
-- `fitz todos` — quick per-repo todo list.
-  - `fitz todos <text>` — add a new todo item.
-  - `fitz todos list` — interactive TUI to view and mark todos done.
-  - `fitz todos help` — show todo usage and available subcommands.
+- `fitz todo` — quick per-repo todo list.
+  - `fitz todo <text>` — add a new todo item.
+  - `fitz todo list` — interactive TUI to view and mark todos done.
+  - `fitz todo help` — show todo usage and available subcommands.
 - `fitz update` — replace the current executable with the latest release asset for your OS/arch.
 - `fitz version` — print current version.
 
