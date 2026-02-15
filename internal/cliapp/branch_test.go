@@ -52,7 +52,8 @@ func TestRunExecMockable(t *testing.T) {
 		return nil
 	}
 
-	err := runExec("/usr/bin/copilot", []string{"copilot", "--continue"}, os.Environ())
+	// Without a session match, BrGo should call copilot with no resume flag.
+	err := runExec("/usr/bin/copilot", []string{"copilot"}, os.Environ())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -65,8 +66,36 @@ func TestRunExecMockable(t *testing.T) {
 		t.Errorf("binary = %q, want /usr/bin/copilot", capturedBinary)
 	}
 
-	if len(capturedArgs) != 2 || capturedArgs[0] != "copilot" || capturedArgs[1] != "--continue" {
-		t.Errorf("args = %v, want [copilot --continue]", capturedArgs)
+	if len(capturedArgs) != 1 || capturedArgs[0] != "copilot" {
+		t.Errorf("args = %v, want [copilot]", capturedArgs)
+	}
+}
+
+func TestRunExecWithResume(t *testing.T) {
+	originalExec := runExec
+	t.Cleanup(func() { runExec = originalExec })
+
+	var capturedArgs []string
+
+	runExec = func(binary string, args []string, env []string) error {
+		capturedArgs = args
+		return nil
+	}
+
+	// With a --resume flag, args should include session ID.
+	err := runExec("/usr/bin/copilot", []string{"copilot", "--resume", "abc-123"}, os.Environ())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	wantArgs := []string{"copilot", "--resume", "abc-123"}
+	if len(capturedArgs) != len(wantArgs) {
+		t.Fatalf("args = %v, want %v", capturedArgs, wantArgs)
+	}
+	for i, a := range wantArgs {
+		if capturedArgs[i] != a {
+			t.Errorf("args[%d] = %q, want %q", i, capturedArgs[i], a)
+		}
 	}
 }
 
