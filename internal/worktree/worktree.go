@@ -34,10 +34,6 @@ func ValidateName(name string) error {
 		return errors.New("worktree name cannot start with dash")
 	}
 
-	if strings.Contains(name, "/") {
-		return errors.New("worktree name cannot contain forward slash")
-	}
-
 	if strings.Contains(name, "\\") {
 		return errors.New("worktree name cannot contain backslash")
 	}
@@ -47,6 +43,12 @@ func ValidateName(name string) error {
 	}
 
 	return nil
+}
+
+// DirName converts a worktree/branch name to a directory-safe name by
+// replacing forward slashes with dashes.
+func DirName(name string) string {
+	return strings.ReplaceAll(name, "/", "-")
 }
 
 func (m *Manager) Create(dir, name, base string) (string, error) {
@@ -66,7 +68,8 @@ func (m *Manager) Create(dir, name, base string) (string, error) {
 		}
 	}
 
-	path := filepath.Join(homeDir, ".fitz", owner, repo, name)
+	dirName := DirName(name)
+	path := filepath.Join(homeDir, ".fitz", owner, repo, dirName)
 
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -145,7 +148,7 @@ func (m *Manager) Path(dir, name string) (string, error) {
 		}
 	}
 
-	path := filepath.Join(homeDir, ".fitz", owner, repo, name)
+	path := filepath.Join(homeDir, ".fitz", owner, repo, DirName(name))
 
 	absPath, err := filepath.Abs(path)
 	if err != nil {

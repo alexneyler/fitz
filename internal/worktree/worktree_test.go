@@ -51,6 +51,61 @@ func TestManagerCreate(t *testing.T) {
 	}
 }
 
+func TestDirName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"my-feature", "my-feature"},
+		{"feat/login", "feat-login"},
+		{"feat/auth/login", "feat-auth-login"},
+		{"no-slash", "no-slash"},
+	}
+
+	for _, tc := range tests {
+		got := DirName(tc.input)
+		if got != tc.want {
+			t.Errorf("DirName(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestManagerCreateSlashName(t *testing.T) {
+	git := &mockGit{
+		outputs: map[string]string{
+			"/test/repo:remote get-url origin ":                                                  "https://github.com/owner/repo.git",
+			"/test/repo:worktree add /home/user/.fitz/owner/repo/feat-login -b feat/login main ": "",
+		},
+		errs: make(map[string]error),
+	}
+
+	m := &Manager{
+		Git:     git,
+		HomeDir: "/home/user",
+	}
+
+	path, err := m.Create("/test/repo", "feat/login", "main")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	wantPath := "/home/user/.fitz/owner/repo/feat-login"
+	if path != wantPath {
+		t.Errorf("path = %q, want %q", path, wantPath)
+	}
+
+	for _, call := range git.calls {
+		if len(call) > 2 && call[1] == "worktree" && call[2] == "add" {
+			if call[3] != wantPath {
+				t.Errorf("worktree add path = %q, want %q", call[3], wantPath)
+			}
+			if call[5] != "feat/login" {
+				t.Errorf("branch = %q, want feat/login", call[5])
+			}
+		}
+	}
+}
+
 func TestManagerCreateDefaultBase(t *testing.T) {
 	git := &mockGit{
 		outputs: map[string]string{
@@ -364,9 +419,12 @@ func TestValidateName(t *testing.T) {
 		{name: "mixed case", input: "MyFeature", wantErr: false},
 		{name: "underscore", input: "my_feature", wantErr: false},
 
+		// Slash names (allowed — slash becomes dash in dir)
+		{name: "forward slash", input: "foo/bar", wantErr: false},
+		{name: "nested slash", input: "feat/auth/login", wantErr: false},
+
 		// Invalid names
 		{name: "path traversal", input: "../evil", wantErr: true},
-		{name: "forward slash", input: "foo/bar", wantErr: true},
 		{name: "backslash", input: "foo\\bar", wantErr: true},
 		{name: "empty", input: "", wantErr: true},
 		{name: "dash prefix", input: "--flag", wantErr: true},
@@ -408,7 +466,7 @@ func TestManagerCreateRejectsInvalidName(t *testing.T) {
 	}
 }
 
-func TestManagerPathRejectsInvalidName(t *testing.T) {
+func TestManagerPathSlashName(t *testing.T) {
 	git := &mockGit{
 		outputs: map[string]string{
 			"/test/repo:remote get-url origin ": "https://github.com/owner/repo.git",
@@ -421,9 +479,14 @@ func TestManagerPathRejectsInvalidName(t *testing.T) {
 		HomeDir: "/home/user",
 	}
 
-	_, err := m.Path("/test/repo", "foo/bar")
-	if err == nil {
-		t.Fatal("expected error for name with slash")
+	path, err := m.Path("/test/repo", "feat/login")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := "/home/user/.fitz/owner/repo/feat-login"
+	if path != want {
+		t.Errorf("path = %q, want %q", path, want)
 	}
 }
 
