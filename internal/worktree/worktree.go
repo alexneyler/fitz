@@ -119,7 +119,62 @@ func (m *Manager) Remove(dir, name string, force bool) error {
 	}
 
 	_, err = m.Git.Run(dir, "worktree", "prune")
+	if err != nil {
+		return err
+	}
+
+	branchFlag := "-d"
+	if force {
+		branchFlag = "-D"
+	}
+	_, err = m.Git.Run(dir, "branch", branchFlag, name)
 	return err
+}
+
+// RemoveAll removes all worktrees (except root) and their branches.
+// Returns the names of removed worktrees.
+func (m *Manager) RemoveAll(dir string, force bool) ([]string, error) {
+	list, err := m.List(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var removed []string
+	for i, wt := range list {
+		if i == 0 {
+			continue // skip root
+		}
+		name := wt.Branch
+		if name == "" {
+			name = wt.Name
+		}
+
+		removeArgs := []string{"worktree", "remove", wt.Path}
+		if force {
+			removeArgs = append(removeArgs, "--force")
+		}
+		if _, err := m.Git.Run(dir, removeArgs...); err != nil {
+			return removed, fmt.Errorf("remove worktree %s: %w", name, err)
+		}
+
+		if wt.Branch != "" {
+			branchFlag := "-d"
+			if force {
+				branchFlag = "-D"
+			}
+			if _, err := m.Git.Run(dir, "branch", branchFlag, wt.Branch); err != nil {
+				return removed, fmt.Errorf("delete branch %s: %w", wt.Branch, err)
+			}
+		}
+
+		removed = append(removed, name)
+	}
+
+	if len(removed) > 0 {
+		_, _ = m.Git.Run(dir, "worktree", "prune")
+	}
+
+	return removed, nil
 }
 
 func (m *Manager) List(dir string) ([]WorktreeInfo, error) {

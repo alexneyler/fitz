@@ -131,7 +131,32 @@ func BrRemove(ctx context.Context, w io.Writer, name string, force bool) error {
 		return fmt.Errorf("remove worktree: %w", err)
 	}
 
-	fmt.Fprintf(w, "removed worktree: %s\n", name)
+	fmt.Fprintf(w, "removed worktree and branch: %s\n", name)
+	return nil
+}
+
+func BrRemoveAll(ctx context.Context, w io.Writer, force bool) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
+
+	git := worktree.ShellGit{}
+	mgr := &worktree.Manager{Git: git}
+
+	removed, err := mgr.RemoveAll(cwd, force)
+	if err != nil {
+		return fmt.Errorf("remove worktrees: %w", err)
+	}
+
+	if len(removed) == 0 {
+		fmt.Fprintln(w, "no worktrees to remove")
+		return nil
+	}
+
+	for _, name := range removed {
+		fmt.Fprintf(w, "removed worktree and branch: %s\n", name)
+	}
 	return nil
 }
 

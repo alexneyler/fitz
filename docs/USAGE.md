@@ -24,9 +24,12 @@
   - Example: `fitz br new --base main feature-login implement user authentication`
 - `fitz br go <name>` — switch to an existing worktree.
   - Example: `fitz br go feature-login`
-- `fitz br rm <name> [--force]` — remove a worktree (optionally force removal).
+- `fitz br rm <name> [--force]` — remove a worktree and its branch (optionally force removal).
   - Example: `fitz br rm feature-login`
   - Example: `fitz br rm feature-login --force`
+- `fitz br rm --all [--force]` — remove all worktrees and their branches.
+  - Example: `fitz br rm --all`
+  - Example: `fitz br rm --all --force`
 - `fitz br list` — list all worktrees. The current worktree (or root) is highlighted in blue with a `*` prefix.
   - Example: `fitz br list`
 - `fitz br cd <name>` — print the path to a worktree (for shell integration).

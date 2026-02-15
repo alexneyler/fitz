@@ -149,7 +149,7 @@ func (brCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "  help    Show this help message")
 	fmt.Fprintln(w, "  list    List all worktrees")
 	fmt.Fprintln(w, "  new     Create a new worktree (optionally with --base and/or prompt)")
-	fmt.Fprintln(w, "  rm      Remove a worktree")
+	fmt.Fprintln(w, "  rm      Remove a worktree and its branch (--all to remove all)")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run with no command to show the current worktree.")
 }
@@ -176,19 +176,37 @@ func (b brCommand) Run(ctx context.Context, args []string, stdout, stderr io.Wri
 
 	case "rm":
 		if len(args) < 2 {
-			return fmt.Errorf("usage: fitz br rm <name> [--force]")
+			return fmt.Errorf("usage: fitz br rm <name> [--force]\n       fitz br rm --all [--force]")
 		}
-		name := args[1]
-		force := false
 
-		if len(args) > 2 {
-			if len(args) == 3 && args[2] == "--force" {
+		all := false
+		force := false
+		var name string
+
+		for _, arg := range args[1:] {
+			switch arg {
+			case "--all":
+				all = true
+			case "--force":
 				force = true
-			} else {
-				return fmt.Errorf("usage: fitz br rm <name> [--force]")
+			default:
+				if name != "" {
+					return fmt.Errorf("usage: fitz br rm <name> [--force]\n       fitz br rm --all [--force]")
+				}
+				name = arg
 			}
 		}
 
+		if all && name != "" {
+			return fmt.Errorf("usage: fitz br rm <name> [--force]\n       fitz br rm --all [--force]")
+		}
+		if !all && name == "" {
+			return fmt.Errorf("usage: fitz br rm <name> [--force]\n       fitz br rm --all [--force]")
+		}
+
+		if all {
+			return cliapp.BrRemoveAll(ctx, stdout, force)
+		}
 		return cliapp.BrRemove(ctx, stdout, name, force)
 
 	case "list":
