@@ -13,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"fitz/internal/session"
 	"fitz/internal/worktree"
 )
@@ -194,7 +196,7 @@ func BrRemoveAll(ctx context.Context, w io.Writer, force bool) error {
 	return nil
 }
 
-func BrList(ctx context.Context, w io.Writer) error {
+func BrList(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("get working directory: %w", err)
@@ -213,7 +215,35 @@ func BrList(ctx context.Context, w io.Writer) error {
 		return fmt.Errorf("list worktrees: %w", err)
 	}
 
-	worktree.FormatList(w, list, current)
+	// Launch interactive TUI.
+	model := newBrModel(list, current)
+	model.onRemove = func(name string) error {
+		return mgr.Remove(cwd, name, false)
+	}
+
+	p := tea.NewProgram(model, tea.WithInput(stdin), tea.WithOutput(stdout))
+	finalModel, err := p.Run()
+	if err != nil {
+		return err
+	}
+
+	m, ok := finalModel.(brModel)
+	if !ok {
+		return nil
+	}
+
+	// Dispatch result actions.
+	switch m.result.Action {
+	case BrActionGo:
+		return BrGo(ctx, stdout, m.result.Name)
+	case BrActionNew:
+		return BrNew(ctx, stdout, m.result.BranchName, "", "")
+	case BrActionNewKickoff:
+		return BrNew(ctx, stdout, m.result.BranchName, "", m.result.Prompt)
+	case BrActionPublish:
+		return BrPublish(ctx, stdout, m.result.Name)
+	}
+
 	return nil
 }
 

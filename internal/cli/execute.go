@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -19,7 +18,7 @@ var runUpdate = cliapp.Update
 // Any such command must provide a Help method.
 type Subcommand interface {
 	Help(w io.Writer)
-	Run(ctx context.Context, args []string, stdout, stderr io.Writer) error
+	Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error
 }
 
 // All commands with sub-subcommands must be registered here.
@@ -38,7 +37,7 @@ type commandLine struct {
 	Todo struct{} `cmd:"" help:"Quick per-repo todo list."`
 }
 
-func Execute(args []string, stdout, stderr io.Writer) error {
+func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		printUsage(stdout)
 		return nil
@@ -51,7 +50,7 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 			sub.Help(stdout)
 			return nil
 		}
-		return sub.Run(context.Background(), subArgs, stdout, stderr)
+		return sub.Run(context.Background(), subArgs, stdin, stdout, stderr)
 	}
 
 	cli := commandLine{}
@@ -155,9 +154,9 @@ func (brCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "Run with no command to show the current worktree.")
 }
 
-func (b brCommand) Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+func (b brCommand) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return cliapp.BrCurrent(ctx, stdout)
+		return cliapp.BrList(ctx, stdin, stdout)
 	}
 
 	subcommand := args[0]
@@ -211,7 +210,7 @@ func (b brCommand) Run(ctx context.Context, args []string, stdout, stderr io.Wri
 		return cliapp.BrRemove(ctx, stdout, name, force)
 
 	case "list":
-		return cliapp.BrList(ctx, stdout)
+		return cliapp.BrList(ctx, stdin, stdout)
 
 	case "publish":
 		var name string
@@ -250,7 +249,7 @@ func (todoCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "  list      Interactive todo list (enter: create worktree, d: done)")
 }
 
-func (t todoCommand) Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+func (t todoCommand) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		t.Help(stdout)
 		return nil
@@ -258,7 +257,7 @@ func (t todoCommand) Run(ctx context.Context, args []string, stdout, stderr io.W
 
 	switch args[0] {
 	case "list":
-		return cliapp.TodoList(ctx, os.Stdin, stdout)
+		return cliapp.TodoList(ctx, stdin, stdout)
 	default:
 		text := strings.Join(args, " ")
 		return cliapp.TodoAdd(ctx, stdout, text)

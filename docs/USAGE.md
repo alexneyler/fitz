@@ -14,7 +14,7 @@
   - Example: `fitz completion bash`
 - `fitz completion zsh` — prints zsh completion script.
   - Example: `fitz completion zsh`
-- `fitz br` — show the current worktree.
+- `fitz br` — interactive worktree list. Navigate with ↑/↓, press enter to switch worktrees, d to delete (with confirmation), n to create a new worktree, p to publish (push + create PR), or q to quit. The root worktree is shown dimmed and non-actionable.
   - Example: `fitz br`
 - `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. If a prompt is given (one or more words), copilot launches in the background with `--yolo -p "<prompt>"`.
   - Example: `fitz br new feature-login`
@@ -30,7 +30,7 @@
 - `fitz br rm --all [--force]` — remove all worktrees and their branches.
   - Example: `fitz br rm --all`
   - Example: `fitz br rm --all --force`
-- `fitz br list` — list all worktrees. The current worktree (or root) is highlighted in blue with a `*` prefix.
+- `fitz br list` — interactive worktree list (same as `fitz br`). Navigate with ↑/↓/j/k, press enter to switch worktrees (executes `fitz br go`), d to delete a worktree (with confirmation), n to create a new worktree (prompts for name and action), p to publish (push + create PR), or q/esc/ctrl+c to quit.
   - Example: `fitz br list`
 - `fitz br cd <name>` — print the path to a worktree (for shell integration).
   - Example: `fitz br cd feature-login`

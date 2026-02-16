@@ -23,8 +23,10 @@ func TestBrCurrent(t *testing.T) {
 }
 
 func TestBrList(t *testing.T) {
+	// Create a stdin that immediately sends 'q' to quit the TUI.
+	stdin := strings.NewReader("q")
 	var out bytes.Buffer
-	err := BrList(context.Background(), &out)
+	err := BrList(context.Background(), stdin, &out)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
