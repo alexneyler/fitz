@@ -3,7 +3,7 @@
 Contributor and agent workflow for this repo:
 
 1. Use TDD: write/adjust a failing test first, then implement the feature/fix, then make tests pass.
-2. If your change affects commands, CLI behavior, or docs, run the `.agents/skills/update-docs` skill before committing.
+2. If your change affects commands, CLI behavior, or docs, run the `.agents/skills/update-docs` skill before committing. Only update docs for functional changes (new/removed/renamed commands, changed arguments, altered behavior). Cosmetic or internal-only changes (animations, refactors, style tweaks) do not require doc updates.
 3. Lint before commit:
    ```sh
    make lint

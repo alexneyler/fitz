@@ -2,6 +2,7 @@ package cliapp
 
 import (
 	"fmt"
+	"math/rand"
 	"regexp"
 	"strings"
 
@@ -57,6 +58,11 @@ type todoModel struct {
 	addInput textinput.Model
 	adding   bool
 
+	// dissolve animation state
+	dissolving    int // index of item being dissolved, -1 if none
+	dissolveFrame int
+	dissolveRng   *rand.Rand
+
 	// result
 	result TodoResult
 }
@@ -66,7 +72,7 @@ func newTodoModel(items []TodoItem, path string) todoModel {
 	bi.Placeholder = "branch-name"
 	ai := textinput.New()
 	ai.Placeholder = "new todo text"
-	return todoModel{items: items, path: path, branchInput: bi, addInput: ai}
+	return todoModel{items: items, path: path, branchInput: bi, addInput: ai, dissolving: -1}
 }
 
 func (m todoModel) Init() tea.Cmd { return nil }
@@ -84,6 +90,32 @@ func (m todoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m todoModel) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// While dissolving, only process tick messages.
+	if m.dissolving >= 0 {
+		if _, ok := msg.(dissolveTickMsg); ok {
+			m.dissolveFrame++
+			if m.dissolveFrame > dissolveFrames {
+				removed := m.items[m.dissolving]
+				m.removed = append(m.removed, removed.Text)
+				m.items = append(m.items[:m.dissolving], m.items[m.dissolving+1:]...)
+				_ = RemoveTodoItem(m.path, removed.ID)
+				if m.cursor >= len(m.items) && m.cursor > 0 {
+					m.cursor--
+				}
+				m.dissolving = -1
+				m.dissolveFrame = 0
+				m.dissolveRng = nil
+				if len(m.items) == 0 {
+					m.quitting = true
+					return m, tea.Quit
+				}
+				return m, nil
+			}
+			return m, dissolveTickCmd()
+		}
+		return m, nil
+	}
+
 	// When adding inline, route input to the text field
 	if m.adding {
 		switch msg := msg.(type) {
@@ -133,17 +165,10 @@ func (m todoModel) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "d":
 			if m.cursor < len(m.items) && len(m.items) > 0 {
-				removed := m.items[m.cursor]
-				m.removed = append(m.removed, removed.Text)
-				m.items = append(m.items[:m.cursor], m.items[m.cursor+1:]...)
-				_ = RemoveTodoItem(m.path, removed.ID)
-				if m.cursor >= len(m.items) && m.cursor > 0 {
-					m.cursor--
-				}
-				if len(m.items) == 0 {
-					m.quitting = true
-					return m, tea.Quit
-				}
+				m.dissolving = m.cursor
+				m.dissolveFrame = 1
+				m.dissolveRng = rand.New(rand.NewSource(int64(len(m.items[m.cursor].Text))))
+				return m, dissolveTickCmd()
 			}
 		case "enter":
 			if m.cursor == len(m.items) {
@@ -261,7 +286,14 @@ func (m todoModel) viewList() string {
 			cursor = "▸ "
 			style = selectedStyle
 		}
-		b.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, item.Text)))
+		displayText := item.Text
+		if i == m.dissolving && m.dissolveRng != nil {
+			// Create a fresh RNG copy each render so the same frame
+			// always produces the same output.
+			rng := rand.New(rand.NewSource(m.dissolveRng.Int63()))
+			displayText = dissolveText(item.Text, m.dissolveFrame, dissolveFrames, rng)
+		}
+		b.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, displayText)))
 		b.WriteString("\n")
 	}
 
