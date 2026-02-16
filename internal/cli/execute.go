@@ -144,12 +144,13 @@ func (brCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "Usage: fitz br <command>")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
-	fmt.Fprintln(w, "  cd      Print the path to a worktree")
-	fmt.Fprintln(w, "  go      Switch to an existing worktree")
-	fmt.Fprintln(w, "  help    Show this help message")
-	fmt.Fprintln(w, "  list    List all worktrees")
-	fmt.Fprintln(w, "  new     Create a new worktree (optionally with --base and/or prompt)")
-	fmt.Fprintln(w, "  rm      Remove a worktree and its branch (--all to remove all)")
+	fmt.Fprintln(w, "  cd        Print the path to a worktree")
+	fmt.Fprintln(w, "  go        Switch to an existing worktree")
+	fmt.Fprintln(w, "  help      Show this help message")
+	fmt.Fprintln(w, "  list      List all worktrees")
+	fmt.Fprintln(w, "  new       Create a new worktree (optionally with --base and/or prompt)")
+	fmt.Fprintln(w, "  publish   Push a branch and open a pull request (optionally specify worktree)")
+	fmt.Fprintln(w, "  rm        Remove a worktree and its branch (--all to remove all)")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run with no command to show the current worktree.")
 }
@@ -211,6 +212,13 @@ func (b brCommand) Run(ctx context.Context, args []string, stdout, stderr io.Wri
 
 	case "list":
 		return cliapp.BrList(ctx, stdout)
+
+	case "publish":
+		var name string
+		if len(args) > 1 {
+			name = args[1]
+		}
+		return cliapp.BrPublish(ctx, stdout, name)
 
 	case "cd":
 		if len(args) < 2 {

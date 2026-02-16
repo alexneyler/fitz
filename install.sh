@@ -44,6 +44,12 @@ ensure_line() {
 ensure_line 'export PATH="$HOME/.fitz/bin:$PATH"' "$rc_file"
 ensure_line "$completion_line" "$rc_file"
 
+# Install the create-pr skill for Copilot CLI.
+skill_dir="$HOME/.agents/skills/create-pr"
+skill_url="https://raw.githubusercontent.com/alexneyler/fitz/main/skills/create-pr/SKILL.md"
+mkdir -p "$skill_dir"
+curl -fsSL "$skill_url" -o "$skill_dir/SKILL.md"
+
 echo ""
 echo "fitz installed successfully!"
 echo "Run 'source $rc_file' to update your current shell, or open a new terminal."

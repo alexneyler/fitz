@@ -1,6 +1,7 @@
 package cliapp
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"fitz/internal/session"
@@ -28,6 +30,38 @@ var runExec = func(binary string, args []string, env []string) error {
 		return cmd.Run()
 	}
 	return syscall.Exec(binary, args, env)
+}
+
+var runGh = func(dir string, args ...string) (string, error) {
+	ghPath, err := exec.LookPath("gh")
+	if err != nil {
+		return "", errors.New("gh CLI not found in PATH (install from https://cli.github.com)")
+	}
+	cmd := exec.Command(ghPath, args...)
+	cmd.Dir = dir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("gh %v: %w: %s", args, err, stderr.String())
+	}
+	return stdout.String(), nil
+}
+
+var runCopilot = func(dir string, args ...string) (string, error) {
+	copilotPath, err := exec.LookPath("copilot")
+	if err != nil {
+		return "", errors.New("copilot not found in PATH")
+	}
+	cmd := exec.Command(copilotPath, args...)
+	cmd.Dir = dir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("copilot %v: %w: %s", args, err, stderr.String())
+	}
+	return stdout.String(), nil
 }
 
 var runBackground = func(binary string, args []string, dir string) error {
@@ -221,4 +255,61 @@ func BrCd(ctx context.Context, w io.Writer, name string) error {
 
 	fmt.Fprintln(w, path)
 	return nil
+}
+
+func BrPublish(ctx context.Context, w io.Writer, name string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
+
+	git := worktree.ShellGit{}
+
+	// If a worktree name was given, resolve its path and operate there.
+	if name != "" {
+		mgr := &worktree.Manager{Git: git}
+		cwd, err = mgr.Path(cwd, name)
+		if err != nil {
+			return fmt.Errorf("get worktree path: %w", err)
+		}
+	}
+
+	branch, err := git.Run(cwd, "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return fmt.Errorf("get current branch: %w", err)
+	}
+	branch = strings.TrimSpace(branch)
+
+	defaultBranch := detectDefaultBranch(git, cwd)
+	if branch == defaultBranch || branch == "HEAD" {
+		return fmt.Errorf("cannot publish from %s; switch to a feature branch first", branch)
+	}
+
+	_, err = git.Run(cwd, "push", "-u", "origin", branch)
+	if err != nil {
+		return fmt.Errorf("push branch: %w", err)
+	}
+	fmt.Fprintf(w, "pushed %s to origin\n", branch)
+
+	output, err := runCopilot(cwd, "--yolo", "-p", "Create a PR for this branch")
+	if err != nil {
+		return fmt.Errorf("create pull request: %w", err)
+	}
+	output = strings.TrimSpace(output)
+	fmt.Fprintf(w, "%s\n", output)
+
+	return nil
+}
+
+// detectDefaultBranch returns the repo's default branch by inspecting
+// origin/HEAD. Falls back to "main" if the ref is not set.
+func detectDefaultBranch(git worktree.ShellGit, dir string) string {
+	out, err := git.Run(dir, "symbolic-ref", "refs/remotes/origin/HEAD")
+	if err == nil {
+		ref := strings.TrimSpace(out)
+		if i := strings.LastIndex(ref, "/"); i >= 0 {
+			return ref[i+1:]
+		}
+	}
+	return "main"
 }
