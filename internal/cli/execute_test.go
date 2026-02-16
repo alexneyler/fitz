@@ -33,7 +33,8 @@ func TestExecuteKnownCommands(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var out, errOut bytes.Buffer
-			err := Execute(tc.args, &out, &errOut)
+			stdin := strings.NewReader("")
+			err := Execute(tc.args, stdin, &out, &errOut)
 			if err != nil {
 				t.Fatalf("Execute returned error: %v", err)
 			}
@@ -52,7 +53,8 @@ func TestExecuteKnownCommands(t *testing.T) {
 
 func TestExecuteUnknownCommand(t *testing.T) {
 	var out, errOut bytes.Buffer
-	err := Execute([]string{"wat"}, &out, &errOut)
+	stdin := strings.NewReader("")
+	err := Execute([]string{"wat"}, stdin, &out, &errOut)
 	if err == nil {
 		t.Fatal("expected error for unknown command")
 	}
@@ -66,7 +68,8 @@ func TestExecuteUnknownCommand(t *testing.T) {
 
 func TestExecuteCompletionWithoutShell(t *testing.T) {
 	var out, errOut bytes.Buffer
-	err := Execute([]string{"completion"}, &out, &errOut)
+	stdin := strings.NewReader("")
+	err := Execute([]string{"completion"}, stdin, &out, &errOut)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -96,7 +99,8 @@ func TestExecuteBrCommands(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var out, errOut bytes.Buffer
-			err := Execute(tc.args, &out, &errOut)
+			stdin := strings.NewReader("q")
+			err := Execute(tc.args, stdin, &out, &errOut)
 			if tc.wantErr && err == nil {
 				t.Fatal("expected error")
 			}
@@ -112,7 +116,8 @@ func TestAllSubcommandsHandleHelp(t *testing.T) {
 		for _, helpArg := range []string{"help", "--help", "-h"} {
 			t.Run(name+"/"+helpArg, func(t *testing.T) {
 				var out, errOut bytes.Buffer
-				err := Execute([]string{name, helpArg}, &out, &errOut)
+				stdin := strings.NewReader("")
+				err := Execute([]string{name, helpArg}, stdin, &out, &errOut)
 				if err != nil {
 					t.Fatalf("Execute(%s %s) returned error: %v", name, helpArg, err)
 				}
@@ -206,7 +211,8 @@ func TestExecuteBrRmExtraArgs(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var out, errOut bytes.Buffer
-			err := Execute(tc.args, &out, &errOut)
+			stdin := strings.NewReader("")
+			err := Execute(tc.args, stdin, &out, &errOut)
 			if tc.wantErr && err == nil {
 				t.Fatal("expected error")
 			}
@@ -222,7 +228,8 @@ func TestExecuteBrRmExtraArgs(t *testing.T) {
 
 func TestExecuteTodoHelp(t *testing.T) {
 	var out, errOut bytes.Buffer
-	err := Execute([]string{"todo"}, &out, &errOut)
+	stdin := strings.NewReader("")
+	err := Execute([]string{"todo"}, stdin, &out, &errOut)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -233,7 +240,8 @@ func TestExecuteTodoHelp(t *testing.T) {
 
 func TestExecuteHelpListsTodo(t *testing.T) {
 	var out, errOut bytes.Buffer
-	err := Execute([]string{"help"}, &out, &errOut)
+	stdin := strings.NewReader("")
+	err := Execute([]string{"help"}, stdin, &out, &errOut)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
