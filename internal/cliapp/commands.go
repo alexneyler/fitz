@@ -209,7 +209,7 @@ _fitz_completion() {
   fi
 
   if [[ ${COMP_CWORD} -eq 2 && "$prev" == "br" ]]; then
-    COMPREPLY=( $(compgen -W "new go rm list cd help" -- "$cur") )
+    COMPREPLY=( $(compgen -W "new go rm list cd publish help" -- "$cur") )
     return
   fi
 
@@ -237,7 +237,7 @@ _fitz() {
   local -a commands shells br_cmds todo_cmds
   commands=(help version update completion br todo)
   shells=(bash zsh)
-  br_cmds=(new go rm list cd help)
+  br_cmds=(new go rm list cd publish help)
   todo_cmds=(list help)
 
   if (( CURRENT == 2 )); then

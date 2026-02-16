@@ -8,7 +8,7 @@ Small CLI with a stable v1 command surface.
 curl -fsSL https://raw.githubusercontent.com/alexneyler/fitz/main/install.sh | sh
 ```
 
-The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds `~/.fitz/bin` to PATH in your shell rc file, and appends shell completion setup.
+The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds `~/.fitz/bin` to PATH in your shell rc file, appends shell completion setup, and installs the `create-pr` Copilot skill into `~/.agents/skills/create-pr/`.
 
 ## Commands
 
@@ -20,6 +20,7 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
   - `fitz br rm --all [--force]` — remove all worktrees and their branches.
   - `fitz br list` — list all worktrees (current highlighted with `*`).
   - `fitz br cd <name>` — print the path to a worktree (for shell integration).
+  - `fitz br publish [name]` — push the current branch and open a pull request via Copilot CLI (uses the `create-pr` skill). Optionally specify a worktree name.
   - `fitz br help` — show br usage and available subcommands.
 - `fitz completion <bash|zsh>` — print completion script for your shell.
 - `fitz help` — print usage.

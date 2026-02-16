@@ -34,6 +34,9 @@
   - Example: `fitz br list`
 - `fitz br cd <name>` — print the path to a worktree (for shell integration).
   - Example: `fitz br cd feature-login`
+- `fitz br publish [name]` — push the current branch to origin and open a pull request via Copilot CLI (uses the `create-pr` skill installed at `~/.agents/skills/create-pr/`). Refuses to run from the default branch or detached `HEAD`. Optionally specify a worktree name; defaults to the current worktree.
+  - Example: `fitz br publish`
+  - Example: `fitz br publish feature-login`
 - `fitz br help` — show br usage and available subcommands.
   - Example: `fitz br help`
 - `fitz todo <text>` — add a new todo item for the current repo.
