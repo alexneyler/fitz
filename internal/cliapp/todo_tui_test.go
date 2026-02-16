@@ -90,6 +90,104 @@ func TestDissolveIgnoresKeypressesDuringAnimation(t *testing.T) {
 	}
 }
 
+func TestKickoffTransitionsToPromptInput(t *testing.T) {
+	items := []TodoItem{
+		{ID: "a", Text: "fix the bug", Created: time.Now()},
+	}
+	m := newTodoModel(items, t.TempDir()+"/todos.json")
+
+	// Select the todo item.
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(todoModel)
+	if model.state != stateBranchInput {
+		t.Fatalf("state = %d, want stateBranchInput", model.state)
+	}
+
+	// Confirm the branch name.
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = updated.(todoModel)
+	if model.state != stateActionChoice {
+		t.Fatalf("state = %d, want stateActionChoice", model.state)
+	}
+
+	// Move to "Create and kickoff" and select it.
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model = updated.(todoModel)
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = updated.(todoModel)
+
+	// Should transition to prompt input, not quit.
+	if model.state != statePromptInput {
+		t.Fatalf("state = %d, want statePromptInput", model.state)
+	}
+	if model.quitting {
+		t.Fatal("should not be quitting yet")
+	}
+	// Prompt input should be pre-populated with todo text.
+	if model.promptInput.Value() != "fix the bug" {
+		t.Fatalf("prompt value = %q, want %q", model.promptInput.Value(), "fix the bug")
+	}
+}
+
+func TestKickoffPromptInputSetsResult(t *testing.T) {
+	items := []TodoItem{
+		{ID: "a", Text: "fix the bug", Created: time.Now()},
+	}
+	m := newTodoModel(items, t.TempDir()+"/todos.json")
+
+	// Navigate to prompt input state.
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(todoModel)
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = updated.(todoModel)
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model = updated.(todoModel)
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = updated.(todoModel)
+
+	// Clear and type a custom prompt.
+	model.promptInput.SetValue("please fix the login bug in auth.go")
+
+	// Press enter to confirm.
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = updated.(todoModel)
+
+	if model.result.Action != ActionKickoff {
+		t.Fatalf("action = %d, want ActionKickoff", model.result.Action)
+	}
+	if model.result.Prompt != "please fix the login bug in auth.go" {
+		t.Fatalf("prompt = %q, want custom prompt", model.result.Prompt)
+	}
+	if !model.quitting {
+		t.Fatal("expected quitting after prompt confirmation")
+	}
+}
+
+func TestKickoffPromptInputEscGoesBack(t *testing.T) {
+	items := []TodoItem{
+		{ID: "a", Text: "fix the bug", Created: time.Now()},
+	}
+	m := newTodoModel(items, t.TempDir()+"/todos.json")
+
+	// Navigate to prompt input state.
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(todoModel)
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = updated.(todoModel)
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model = updated.(todoModel)
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = updated.(todoModel)
+
+	// Press esc to go back to action choice.
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model = updated.(todoModel)
+
+	if model.state != stateActionChoice {
+		t.Fatalf("state = %d, want stateActionChoice", model.state)
+	}
+}
+
 func TestDissolveLastItemQuitsAfterAnimation(t *testing.T) {
 	items := []TodoItem{
 		{ID: "a", Text: "only", Created: time.Now()},

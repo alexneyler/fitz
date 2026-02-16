@@ -21,6 +21,7 @@ const (
 	stateList = iota
 	stateBranchInput
 	stateActionChoice
+	statePromptInput
 )
 
 // TodoAction describes the action the user chose in the TUI.
@@ -54,6 +55,9 @@ type todoModel struct {
 	// action choice state
 	actionCursor int
 
+	// prompt input state (kickoff mode)
+	promptInput textinput.Model
+
 	// inline add todo input (rendered on the last row of the list)
 	addInput textinput.Model
 	adding   bool
@@ -72,7 +76,9 @@ func newTodoModel(items []TodoItem, path string) todoModel {
 	bi.Placeholder = "branch-name"
 	ai := textinput.New()
 	ai.Placeholder = "new todo text"
-	return todoModel{items: items, path: path, branchInput: bi, addInput: ai, dissolving: -1}
+	pi := textinput.New()
+	pi.Placeholder = "prompt for copilot"
+	return todoModel{items: items, path: path, branchInput: bi, addInput: ai, promptInput: pi, dissolving: -1}
 }
 
 func (m todoModel) Init() tea.Cmd { return nil }
@@ -85,6 +91,8 @@ func (m todoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateBranchInput(msg)
 	case stateActionChoice:
 		return m.updateActionChoice(msg)
+	case statePromptInput:
+		return m.updatePromptInput(msg)
 	}
 	return m, nil
 }
@@ -236,12 +244,14 @@ func (m todoModel) updateActionChoice(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.actionCursor == 0 {
 				m.result.Action = ActionGo
-			} else {
-				m.result.Action = ActionKickoff
-				m.result.Prompt = m.selectedTodo.Text
+				m.quitting = true
+				return m, tea.Quit
 			}
-			m.quitting = true
-			return m, tea.Quit
+			// Kickoff: transition to prompt input
+			m.promptInput.SetValue(m.selectedTodo.Text)
+			m.promptInput.Focus()
+			m.state = statePromptInput
+			return m, m.promptInput.Cursor.BlinkCmd()
 		case "q", "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
@@ -266,6 +276,8 @@ func (m todoModel) View() string {
 		return m.viewBranchInput()
 	case stateActionChoice:
 		return m.viewActionChoice()
+	case statePromptInput:
+		return m.viewPromptInput()
 	default:
 		return m.viewList()
 	}
@@ -352,6 +364,42 @@ func (m todoModel) viewActionChoice() string {
 	b.WriteString(dimStyle.Render("(enter select, esc back)"))
 	b.WriteString("\n")
 	return b.String()
+}
+
+func (m todoModel) viewPromptInput() string {
+	var b strings.Builder
+	b.WriteString(promptStyle.Render(fmt.Sprintf("Kickoff worktree %q for: %q", m.result.BranchName, m.selectedTodo.Text)))
+	b.WriteString("\n\n")
+	b.WriteString(fmt.Sprintf("Prompt: %s", m.promptInput.View()))
+	b.WriteString("\n\n")
+	b.WriteString(dimStyle.Render("(enter confirm, esc back)"))
+	b.WriteString("\n")
+	return b.String()
+}
+
+func (m todoModel) updatePromptInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc":
+			m.state = stateActionChoice
+			m.promptInput.Blur()
+			return m, nil
+		case "enter":
+			prompt := strings.TrimSpace(m.promptInput.Value())
+			if prompt == "" {
+				return m, nil
+			}
+			m.result.Action = ActionKickoff
+			m.result.Prompt = prompt
+			m.quitting = true
+			m.promptInput.Blur()
+			return m, tea.Quit
+		}
+	}
+	var cmd tea.Cmd
+	m.promptInput, cmd = m.promptInput.Update(msg)
+	return m, cmd
 }
 
 func slugify(s string) string {
