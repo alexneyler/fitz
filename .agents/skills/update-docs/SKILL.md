@@ -5,13 +5,14 @@ description: Refresh README.md and docs/USAGE.md after CLI command or docs chang
 
 # Update Docs Skill (fitz)
 
-Use this skill whenever command behavior, command names, usage output, completion behavior, install/update flow, or release asset naming changes.
+Use this skill whenever command behavior, command names, usage output, completion behavior, install/update flow, or release asset naming changes. Do **not** use this skill for cosmetic or internal-only changes (e.g. animations, refactors, styling tweaks) that don't alter the functional CLI surface.
 
 ## Triggers
-- Any edit under `internal/cli/**`, `internal/cliapp/**`, or `cmd/fitz/**`.
+- Any edit under `internal/cli/**`, `internal/cliapp/**`, or `cmd/fitz/**` that changes the functional CLI surface (new/removed/renamed commands, changed arguments or output).
 - Any change to install/update behavior (`install.sh`, updater logic).
 - Any PR that adds/removes/renames commands or command arguments.
 - Any direct edit to `README.md` or `docs/USAGE.md` that should stay aligned.
+- **Not triggered by:** cosmetic changes (animations, styling), internal refactors, or test-only changes.
 
 ## Deterministic update steps
 1. Inspect current CLI surface from source:

@@ -25,7 +25,7 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
 - `fitz help` — print usage.
 - `fitz todo` — quick per-repo todo list.
   - `fitz todo <text>` — add a new todo item.
-  - `fitz todo list` — interactive TUI (enter: create worktree, d: mark done with dissolve effect, add new inline).
+  - `fitz todo list` — interactive TUI (enter: create worktree, d: mark done, add new inline).
   - `fitz todo help` — show todo usage and available subcommands.
 - `fitz update` — replace the current executable with the latest release asset for your OS/arch.
 - `fitz version` — print current version.
