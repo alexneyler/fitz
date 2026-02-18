@@ -104,6 +104,7 @@ func TestKickoffTransitionsToPromptInput(t *testing.T) {
 	}
 
 	// Confirm the branch name.
+	model.branchInput.SetValue("fix-the-bug")
 	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	model = updated.(todoModel)
 	if model.state != stateActionChoice {
@@ -138,6 +139,7 @@ func TestKickoffPromptInputSetsResult(t *testing.T) {
 	// Navigate to prompt input state.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	model := updated.(todoModel)
+	model.branchInput.SetValue("fix-the-bug")
 	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	model = updated.(todoModel)
 	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
@@ -172,6 +174,7 @@ func TestKickoffPromptInputEscGoesBack(t *testing.T) {
 	// Navigate to prompt input state.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	model := updated.(todoModel)
+	model.branchInput.SetValue("fix-the-bug")
 	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	model = updated.(todoModel)
 	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})

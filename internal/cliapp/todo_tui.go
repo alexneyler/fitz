@@ -3,7 +3,6 @@ package cliapp
 import (
 	"fmt"
 	"math/rand"
-	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -190,7 +189,7 @@ func (m todoModel) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectedTodo = m.items[m.cursor]
 				m.branchInput = textinput.New()
 				m.branchInput.Placeholder = "branch-name"
-				m.branchInput.SetValue(slugify(m.selectedTodo.Text))
+				m.branchInput.SetValue("")
 				m.branchInput.Focus()
 				m.state = stateBranchInput
 				return m, m.branchInput.Cursor.BlinkCmd()
@@ -400,16 +399,4 @@ func (m todoModel) updatePromptInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.promptInput, cmd = m.promptInput.Update(msg)
 	return m, cmd
-}
-
-func slugify(s string) string {
-	s = strings.ToLower(s)
-	re := regexp.MustCompile(`[^a-z0-9]+`)
-	s = re.ReplaceAllString(s, "-")
-	s = strings.Trim(s, "-")
-	if len(s) > 50 {
-		s = s[:50]
-		s = strings.TrimRight(s, "-")
-	}
-	return s
 }
