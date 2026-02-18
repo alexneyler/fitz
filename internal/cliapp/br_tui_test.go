@@ -1,10 +1,13 @@
 package cliapp
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"fitz/internal/session"
 	"fitz/internal/worktree"
 )
 
@@ -14,7 +17,7 @@ func TestBrNavigationSkipsRoot(t *testing.T) {
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 		{Path: "/repo/.fitz/owner/repo/feature-2", Branch: "feature-2", Name: "feature-2"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Cursor should start at 1 (first non-root).
 	if m.cursor != 1 {
@@ -48,7 +51,7 @@ func TestBrEnterSetsGoResult(t *testing.T) {
 		{Path: "/repo", Branch: "", Name: "repo"},
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Press enter on the first selectable worktree.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -70,7 +73,7 @@ func TestBrDeleteRequiresConfirmation(t *testing.T) {
 		{Path: "/repo", Branch: "", Name: "repo"},
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Press 'd' to start delete.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
@@ -89,7 +92,7 @@ func TestBrDeleteConfirmationNo(t *testing.T) {
 		{Path: "/repo", Branch: "", Name: "repo"},
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Start delete.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
@@ -113,7 +116,7 @@ func TestBrDeleteConfirmationYes(t *testing.T) {
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 		{Path: "/repo/.fitz/owner/repo/feature-2", Branch: "feature-2", Name: "feature-2"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Start delete.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
@@ -135,7 +138,7 @@ func TestBrNewFlowBranchInput(t *testing.T) {
 	worktrees := []worktree.WorktreeInfo{
 		{Path: "/repo", Branch: "", Name: "repo"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Press 'n' to create new worktree.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
@@ -150,7 +153,7 @@ func TestBrNewFlowActionChoice(t *testing.T) {
 	worktrees := []worktree.WorktreeInfo{
 		{Path: "/repo", Branch: "", Name: "repo"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Press 'n', then enter branch name.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
@@ -173,7 +176,7 @@ func TestBrNewFlowGoAction(t *testing.T) {
 	worktrees := []worktree.WorktreeInfo{
 		{Path: "/repo", Branch: "", Name: "repo"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Navigate to action choice.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
@@ -201,7 +204,7 @@ func TestBrNewFlowKickoffAction(t *testing.T) {
 	worktrees := []worktree.WorktreeInfo{
 		{Path: "/repo", Branch: "", Name: "repo"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Navigate to action choice.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
@@ -227,7 +230,7 @@ func TestBrNewFlowKickoffPrompt(t *testing.T) {
 	worktrees := []worktree.WorktreeInfo{
 		{Path: "/repo", Branch: "", Name: "repo"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Navigate to prompt state.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
@@ -263,7 +266,7 @@ func TestBrPublishSetsResult(t *testing.T) {
 		{Path: "/repo", Branch: "", Name: "repo"},
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Press 'p' to publish.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
@@ -297,7 +300,7 @@ func TestBrQuitKeys(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newBrModel(worktrees, "root")
+			m := newBrModel(worktrees, "root", nil)
 			updated, _ := m.Update(tt.key)
 			model := updated.(brModel)
 			if !model.quitting {
@@ -316,7 +319,7 @@ func TestBrDissolveAnimationCompletesRemoval(t *testing.T) {
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 		{Path: "/repo/.fitz/owner/repo/feature-2", Branch: "feature-2", Name: "feature-2"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 	m.onRemove = func(name string) error { return nil } // Mock removal
 
 	// Start delete → confirm.
@@ -347,7 +350,7 @@ func TestBrOnlyRootShowsNoWorktrees(t *testing.T) {
 	worktrees := []worktree.WorktreeInfo{
 		{Path: "/repo", Branch: "", Name: "repo"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	view := m.View()
 	if view == "" {
@@ -362,7 +365,7 @@ func TestBrEscFromConfirmGoesBackToList(t *testing.T) {
 		{Path: "/repo", Branch: "", Name: "repo"},
 		{Path: "/repo/.fitz/owner/repo/feature-1", Branch: "feature-1", Name: "feature-1"},
 	}
-	m := newBrModel(worktrees, "root")
+	m := newBrModel(worktrees, "root", nil)
 
 	// Start delete.
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
@@ -374,5 +377,65 @@ func TestBrEscFromConfirmGoesBackToList(t *testing.T) {
 
 	if model.state != brStateList {
 		t.Fatalf("state = %d, want brStateList after esc", model.state)
+	}
+}
+
+func TestViewListShowsSessionBadge(t *testing.T) {
+	worktrees := []worktree.WorktreeInfo{
+		{Path: "/repo", Branch: "", Name: "repo"},
+		{Path: "/repo/.fitz/feature-a", Branch: "feature-a", Name: "feature-a"},
+		{Path: "/repo/.fitz/feature-b", Branch: "feature-b", Name: "feature-b"},
+	}
+	sessions := map[string]session.SessionInfo{
+		"/repo/.fitz/feature-a": {
+			SessionID: "sess-1",
+			Summary:   "Added auth middleware",
+			UpdatedAt: time.Now().Add(-10 * time.Minute),
+		},
+	}
+	m := newBrModel(worktrees, "root", sessions)
+
+	view := m.View()
+
+	if !strings.Contains(view, "10m ago") {
+		t.Errorf("expected age in view, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Added auth middleware") {
+		t.Errorf("expected summary in view, got:\n%s", view)
+	}
+}
+
+func TestViewListNoSessionNoBadge(t *testing.T) {
+	worktrees := []worktree.WorktreeInfo{
+		{Path: "/repo", Branch: "", Name: "repo"},
+		{Path: "/repo/.fitz/feature-a", Branch: "feature-a", Name: "feature-a"},
+	}
+	m := newBrModel(worktrees, "root", nil)
+
+	view := m.View()
+
+	if strings.Contains(view, "ago") || strings.Contains(view, "⚡") {
+		t.Errorf("expected no badge for worktree with no session, got:\n%s", view)
+	}
+}
+
+func TestViewListWorkingBadge(t *testing.T) {
+	worktrees := []worktree.WorktreeInfo{
+		{Path: "/repo", Branch: "", Name: "repo"},
+		{Path: "/repo/.fitz/feature-a", Branch: "feature-a", Name: "feature-a"},
+	}
+	sessions := map[string]session.SessionInfo{
+		"/repo/.fitz/feature-a": {
+			SessionID: "sess-1",
+			Summary:   "Doing stuff",
+			UpdatedAt: time.Now().Add(-30 * time.Second),
+		},
+	}
+	m := newBrModel(worktrees, "root", sessions)
+
+	view := m.View()
+
+	if !strings.Contains(view, "⚡ working") {
+		t.Errorf("expected working badge for recent session, got:\n%s", view)
 	}
 }
