@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"fitz/internal/session"
 	"fitz/internal/worktree"
 )
 
@@ -49,6 +51,9 @@ type brModel struct {
 	state     int
 	quitting  bool
 
+	// session info keyed by worktree path
+	sessions map[string]session.SessionInfo
+
 	// confirm delete state
 	confirmName string
 
@@ -73,7 +78,7 @@ type brModel struct {
 	onRemove func(name string) error
 }
 
-func newBrModel(worktrees []worktree.WorktreeInfo, current string) brModel {
+func newBrModel(worktrees []worktree.WorktreeInfo, current string, sessions map[string]session.SessionInfo) brModel {
 	bi := textinput.New()
 	bi.Placeholder = "branch-name"
 	pi := textinput.New()
@@ -89,6 +94,7 @@ func newBrModel(worktrees []worktree.WorktreeInfo, current string) brModel {
 		worktrees:   worktrees,
 		current:     current,
 		cursor:      cursor,
+		sessions:    sessions,
 		branchInput: bi,
 		promptInput: pi,
 		dissolving:  -1,
@@ -388,6 +394,11 @@ func (m brModel) viewList() string {
 		}
 
 		b.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, displayName)))
+		if i > 0 {
+			if badge := m.sessionBadge(wt.Path); badge != "" {
+				b.WriteString(dimStyle.Render("  " + badge))
+			}
+		}
 		b.WriteString("\n")
 	}
 
@@ -451,4 +462,32 @@ func (m brModel) viewNewPrompt() string {
 	b.WriteString(dimStyle.Render("(enter confirm, esc back)"))
 	b.WriteString("\n")
 	return b.String()
+}
+
+// sessionBadge returns a short status string for the given worktree path,
+// or "" if no session exists for it.
+func (m brModel) sessionBadge(worktreePath string) string {
+	info, ok := m.sessions[worktreePath]
+	if !ok || info.SessionID == "" {
+		return ""
+	}
+	if info.UpdatedAt.IsZero() {
+		return "· session exists"
+	}
+	age := time.Since(info.UpdatedAt)
+	if age < 2*time.Minute {
+		return "⚡ working"
+	}
+	badge := "· " + formatAge(age) + " ago"
+	if info.Summary != "" {
+		badge += "  " + info.Summary
+	}
+	return badge
+}
+
+func formatAge(d time.Duration) string {
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	return fmt.Sprintf("%dh", int(d.Hours()))
 }

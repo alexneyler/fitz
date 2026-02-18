@@ -215,8 +215,20 @@ func BrList(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 		return fmt.Errorf("list worktrees: %w", err)
 	}
 
+	// Collect worktree paths and look up session info in a single pass.
+	cwds := make([]string, len(list))
+	for i, wt := range list {
+		cwds[i] = wt.Path
+	}
+	sessions := map[string]session.SessionInfo{}
+	if configDir := copilotConfigDir(); configDir != "" {
+		if s, err := session.FindAllSessionInfos(configDir, cwds); err == nil {
+			sessions = s
+		}
+	}
+
 	// Launch interactive TUI.
-	model := newBrModel(list, current)
+	model := newBrModel(list, current, sessions)
 	model.onRemove = func(name string) error {
 		return mgr.Remove(cwd, name, false)
 	}
