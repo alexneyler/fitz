@@ -24,7 +24,7 @@ type Subcommand interface {
 
 // All commands with sub-subcommands must be registered here.
 var subcommands = map[string]Subcommand{
-	"agent": agentCommand{},
+	"agent":  agentCommand{},
 	"br":     brCommand{},
 	"config": configCommand{},
 	"todo":   todoCommand{},
