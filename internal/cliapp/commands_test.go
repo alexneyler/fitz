@@ -56,6 +56,24 @@ func TestCompletionUsageError(t *testing.T) {
 	}
 }
 
+func TestCompletionScriptsHandleBrGoByChangingDirectory(t *testing.T) {
+	tests := [][]string{{"bash"}, {"zsh"}}
+
+	for _, args := range tests {
+		var out bytes.Buffer
+		if err := Completion(context.Background(), &out, args); err != nil {
+			t.Fatalf("Completion returned error: %v", err)
+		}
+		script := out.String()
+		if !strings.Contains(script, `"$2" == "go"`) {
+			t.Fatalf("script = %q, want br go handling", script)
+		}
+		if !strings.Contains(script, `dir="$(command fitz br cd "$3")" && cd "$dir"`) {
+			t.Fatalf("script = %q, want cd via fitz br cd", script)
+		}
+	}
+}
+
 func TestSelectAsset(t *testing.T) {
 	assets := []githubAsset{
 		{Name: "fitz_linux_amd64", DownloadURL: "https://example.invalid/linux"},

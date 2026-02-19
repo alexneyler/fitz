@@ -25,7 +25,7 @@ Use this skill whenever command behavior, command names, usage output, completio
    - Create the file if missing.
    - Ensure one section per supported command (`help`, `version`, `update`, `completion`).
    - Keep examples and argument forms identical to code behavior (especially `completion <bash|zsh>`).
-4. Keep wording concise and v1-scoped; do not document deferred commands.
+4. Keep wording succinct, user-facing, and v1-scoped; avoid implementation details unless required for command usage, and do not document deferred commands.
 
 ## Validation (required)
 Run all checks:
