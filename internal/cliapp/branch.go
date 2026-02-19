@@ -15,6 +15,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"fitz/internal/config"
 	"fitz/internal/session"
 	"fitz/internal/worktree"
 )
@@ -94,8 +95,10 @@ func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 		return errors.New("copilot not found in PATH")
 	}
 
+	cfg := loadEffectiveConfig(cwd)
+
 	if prompt != "" {
-		args := []string{"copilot", "--yolo", "-p", prompt}
+		args := append(copilotBaseArgs(cfg), "--yolo", "-p", prompt)
 		if err := runBackground(copilotPath, args, path); err != nil {
 			return fmt.Errorf("start copilot: %w", err)
 		}
@@ -109,7 +112,7 @@ func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 		return fmt.Errorf("cd to worktree: %w", err)
 	}
 
-	return runExec(copilotPath, []string{"copilot"}, os.Environ())
+	return runExec(copilotPath, copilotBaseArgs(cfg), os.Environ())
 }
 
 // copilotConfigDir returns the Copilot configuration directory (~/.copilot).
@@ -119,6 +122,27 @@ var copilotConfigDir = func() string {
 		return ""
 	}
 	return filepath.Join(home, ".copilot")
+}
+
+// loadEffectiveConfig loads the merged config for the repo at dir.
+// Non-fatal: returns defaults on any error.
+var loadEffectiveConfig = func(dir string) config.Config {
+	git := worktree.ShellGit{}
+	owner, repo, _ := worktree.RepoID(git, dir)
+	cfg, err := config.LoadEffective("", owner, repo)
+	if err != nil {
+		return config.DefaultConfig()
+	}
+	return cfg
+}
+
+// copilotBaseArgs returns the base args for invoking copilot with model if configured.
+func copilotBaseArgs(cfg config.Config) []string {
+	args := []string{"copilot"}
+	if cfg.Model != "" {
+		args = append(args, "--model", cfg.Model)
+	}
+	return args
 }
 
 func BrGo(ctx context.Context, w io.Writer, name string) error {
@@ -144,7 +168,8 @@ func BrGo(ctx context.Context, w io.Writer, name string) error {
 		return fmt.Errorf("cd to worktree: %w", err)
 	}
 
-	args := []string{"copilot"}
+	cfg := loadEffectiveConfig(cwd)
+	args := copilotBaseArgs(cfg)
 	if configDir := copilotConfigDir(); configDir != "" {
 		if sessionID, err := session.FindLatestSession(configDir, path); err == nil && sessionID != "" {
 			args = append(args, "--resume", sessionID)
@@ -333,7 +358,9 @@ func BrPublish(ctx context.Context, w io.Writer, name string) error {
 	}
 	fmt.Fprintf(w, "pushed %s to origin\n", branch)
 
-	output, err := runCopilot(cwd, "--yolo", "-p", "Create a PR for this branch")
+	cfg := loadEffectiveConfig(cwd)
+	copilotArgs := append(copilotBaseArgs(cfg)[1:], "--yolo", "-p", "Create a PR for this branch")
+	output, err := runCopilot(cwd, copilotArgs...)
 	if err != nil {
 		return fmt.Errorf("create pull request: %w", err)
 	}
