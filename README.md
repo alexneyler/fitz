@@ -23,6 +23,15 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
   - `fitz br publish [name]` — push the current branch and open a pull request via Copilot CLI (uses the `create-pr` skill). Optionally specify a worktree name.
   - `fitz br help` — show br usage and available subcommands.
 - `fitz completion <bash|zsh>` — print completion script for your shell.
+- `fitz config [--global] <command>` — get and set configuration values.
+  - `fitz config get <key>` — print the value of a config key (repo-level).
+  - `fitz config set <key> <value>` — set a config key (repo-level).
+  - `fitz config unset <key>` — remove a config key (repo-level).
+  - `fitz config list` — list all config keys and their values (repo-level).
+  - Add `--global` to any subcommand to target global config (`~/.fitz/config.json`) instead.
+  - Valid keys: `model` (passed as `--model` to Copilot CLI), `agent` (agent framework; default: `copilot-cli`).
+  - Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`. Repo config overrides global, which overrides defaults.
+  - `fitz config help` — show config usage and available subcommands.
 - `fitz help` — print usage.
 - `fitz todo` — quick per-repo todo list.
   - `fitz todo <text>` — add a new todo item.

@@ -14,6 +14,22 @@
   - Example: `fitz completion bash`
 - `fitz completion zsh` — prints zsh completion script.
   - Example: `fitz completion zsh`
+- `fitz config [--global] <command>` — get and set configuration values. Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`. Repo config overrides global, which overrides built-in defaults.
+  - `fitz config get <key>` — print the value of a config key for the current repo.
+    - Example: `fitz config get model`
+    - Example: `fitz config --global get model`
+  - `fitz config set <key> <value>` — set a config key.
+    - Example: `fitz config set model claude-opus-4-5`
+    - Example: `fitz config --global set model gpt-5.3-codex`
+  - `fitz config unset <key>` — remove a config key (falls back to global/default).
+    - Example: `fitz config unset model`
+    - Example: `fitz config --global unset agent`
+  - `fitz config list` — list all keys and their values for the current repo.
+    - Example: `fitz config list`
+    - Example: `fitz config --global list`
+  - `fitz config help` — show config usage and available subcommands.
+    - Example: `fitz config help`
+  - Valid keys: `model` (passed as `--model` to Copilot CLI on every invocation), `agent` (agent framework; only `copilot-cli` supported today).
 - `fitz br` — interactive worktree list. Navigate with ↑/↓, press enter to switch worktrees, d to delete (with confirmation), n to create a new worktree, p to publish (push + create PR), or q to quit. The root worktree is shown dimmed and non-actionable.
   - Example: `fitz br`
 - `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. If a prompt is given (one or more words), copilot launches in the background with `--yolo -p "<prompt>"`.
@@ -58,6 +74,7 @@ Usage: fitz <command>
 Commands:
   br            Manage worktrees
   completion    Print shell completion script
+  config        Get and set configuration values
   help          Show this help message
   todo          Quick per-repo todo list
   update        Update fitz to the latest release
