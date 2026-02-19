@@ -13,6 +13,7 @@ import (
 
 var Version = "dev"
 var runUpdate = cliapp.Update
+var runAgentStatus = cliapp.AgentStatus
 
 // Subcommand represents a command that has its own sub-subcommands.
 // Any such command must provide a Help method.
@@ -23,8 +24,9 @@ type Subcommand interface {
 
 // All commands with sub-subcommands must be registered here.
 var subcommands = map[string]Subcommand{
-	"br":   brCommand{},
-	"todo": todoCommand{},
+	"agent": agentCommand{},
+	"br":    brCommand{},
+	"todo":  todoCommand{},
 }
 
 type commandLine struct {
@@ -33,8 +35,9 @@ type commandLine struct {
 	Completion struct {
 		Shell string `arg:"" optional:"" help:"Target shell (bash or zsh)."`
 	} `cmd:"" help:"Print shell completion script."`
-	Br   struct{} `cmd:"" help:"Manage worktrees."`
-	Todo struct{} `cmd:"" help:"Quick per-repo todo list."`
+	Agent struct{} `cmd:"" help:"Workflow commands for agents to execute."`
+	Br    struct{} `cmd:"" help:"Manage worktrees."`
+	Todo  struct{} `cmd:"" help:"Quick per-repo todo list."`
 }
 
 func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
@@ -99,6 +102,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: fitz <command>")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  agent         Workflow commands for agents to execute")
 	fmt.Fprintln(w, "  br            Manage worktrees")
 	fmt.Fprintln(w, "  completion    Print shell completion script")
 	fmt.Fprintln(w, "  help          Show this help message")
@@ -135,6 +139,57 @@ func parseBrNewArgs(args []string) (name, base, prompt string, err error) {
 		prompt = strings.Join(positional[1:], " ")
 	}
 	return name, base, prompt, nil
+}
+
+func parseAgentStatusArgs(args []string) (message, prURL string, err error) {
+	var positional []string
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--pr" {
+			i++
+			if i >= len(args) {
+				return "", "", fmt.Errorf("usage: fitz agent status [--pr <url>] [message]")
+			}
+			prURL = args[i]
+		} else {
+			positional = append(positional, args[i])
+		}
+	}
+	if len(positional) > 0 {
+		message = strings.Join(positional, " ")
+	}
+	if strings.TrimSpace(message) == "" && strings.TrimSpace(prURL) == "" {
+		return "", "", fmt.Errorf("usage: fitz agent status [--pr <url>] [message]")
+	}
+	return message, prURL, nil
+}
+
+type agentCommand struct{}
+
+func (agentCommand) Help(w io.Writer) {
+	fmt.Fprintln(w, "Usage: fitz agent <command>")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Commands:")
+	fmt.Fprintln(w, "  help      Show this help message")
+	fmt.Fprintln(w, "  status    Save branch status for agents (message and/or --pr URL)")
+}
+
+func (a agentCommand) Run(_ context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		a.Help(stdout)
+		return nil
+	}
+
+	switch args[0] {
+	case "status":
+		message, prURL, err := parseAgentStatusArgs(args[1:])
+		if err != nil {
+			return err
+		}
+		return runAgentStatus(stdout, message, prURL)
+	default:
+		a.Help(stderr)
+		return fmt.Errorf("unknown agent subcommand: %s", args[0])
+	}
 }
 
 type brCommand struct{}

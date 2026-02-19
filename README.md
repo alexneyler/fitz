@@ -8,9 +8,11 @@ Small CLI with a stable v1 command surface.
 curl -fsSL https://raw.githubusercontent.com/alexneyler/fitz/main/install.sh | sh
 ```
 
-The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds `~/.fitz/bin` to PATH in your shell rc file, appends shell completion setup, and installs the `create-pr` Copilot skill into `~/.agents/skills/create-pr/`.
+The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds `~/.fitz/bin` to PATH in your shell rc file, appends shell completion setup, and installs the `create-pr` and `update-fitz` Copilot skills into `~/.agents/skills/`.
 
 ## Commands
+
+### Human commands
 
 - `fitz br` — manage worktrees.
   - `fitz br` — interactive worktree list with key bindings (↑/↓: navigate, enter: go, d: delete, n: new, p: publish, q: quit).
@@ -18,7 +20,7 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
   - `fitz br go <name>` — switch to a worktree.
   - `fitz br rm <name> [--force]` — remove a worktree and its branch.
   - `fitz br rm --all [--force]` — remove all worktrees and their branches.
-  - `fitz br list` — interactive worktree list (same as `fitz br`).
+  - `fitz br list` — interactive worktree list (same as `fitz br`). Shows Copilot session activity plus `fitz agent status` updates, including clickable PR links.
   - `fitz br cd <name>` — print the path to a worktree (for shell integration).
   - `fitz br publish [name]` — push the current branch and open a pull request via Copilot CLI (uses the `create-pr` skill). Optionally specify a worktree name.
   - `fitz br help` — show br usage and available subcommands.
@@ -30,6 +32,14 @@ The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds 
   - `fitz todo help` — show todo usage and available subcommands.
 - `fitz update` — replace the current executable with the latest release asset for your OS/arch.
 - `fitz version` — print current version.
+
+### Agent commands (humans can run these too)
+
+Fitz is built for both humans and agents. Agents can call these commands to report progress, and humans can run them directly when helpful.
+
+- `fitz agent` — workflow commands for agents to execute.
+  - `fitz agent status [--pr <url>] [message]` — store branch status metadata for `fitz br list` (message is capped to 80 chars).
+  - `fitz agent help` — show agent usage and available subcommands.
 
 ## Shell integration (bash/zsh)
 

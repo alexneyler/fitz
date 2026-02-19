@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"fitz/internal/session"
+	"fitz/internal/status"
 	"fitz/internal/worktree"
 )
 
@@ -437,5 +438,40 @@ func TestViewListWorkingBadge(t *testing.T) {
 
 	if !strings.Contains(view, "⚡ working") {
 		t.Errorf("expected working badge for recent session, got:\n%s", view)
+	}
+}
+
+func TestViewListShowsAgentStatusMessage(t *testing.T) {
+	worktrees := []worktree.WorktreeInfo{
+		{Path: "/repo", Branch: "", Name: "repo"},
+		{Path: "/repo/.fitz/feature-a", Branch: "feature-a", Name: "feature-a"},
+	}
+	m := newBrModel(worktrees, "root", nil)
+	m.statuses = map[string]status.BranchStatus{
+		"feature-a": {Message: "Implementing auth module"},
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "Implementing auth module") {
+		t.Errorf("expected status message in view, got:\n%s", view)
+	}
+}
+
+func TestViewListShowsClickablePRLink(t *testing.T) {
+	worktrees := []worktree.WorktreeInfo{
+		{Path: "/repo", Branch: "", Name: "repo"},
+		{Path: "/repo/.fitz/feature-a", Branch: "feature-a", Name: "feature-a"},
+	}
+	m := newBrModel(worktrees, "root", nil)
+	m.statuses = map[string]status.BranchStatus{
+		"feature-a": {PRURL: "https://github.com/acme/repo/pull/42"},
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "PR #42") {
+		t.Errorf("expected PR label in view, got:\n%s", view)
+	}
+	if !strings.Contains(view, "]8;;https://github.com/acme/repo/pull/42") {
+		t.Errorf("expected OSC 8 hyperlink in view, got:\n%s", view)
 	}
 }

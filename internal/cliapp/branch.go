@@ -16,6 +16,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"fitz/internal/session"
+	"fitz/internal/status"
 	"fitz/internal/worktree"
 )
 
@@ -226,9 +227,16 @@ func BrList(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 			sessions = s
 		}
 	}
+	statuses := map[string]status.BranchStatus{}
+	if statusPath, err := resolveAgentStatusPath(); err == nil {
+		if s, err := status.Load(statusPath); err == nil {
+			statuses = s
+		}
+	}
 
 	// Launch interactive TUI.
 	model := newBrModel(list, current, sessions)
+	model.statuses = statuses
 	model.onRemove = func(name string) error {
 		return mgr.Remove(cwd, name, false)
 	}

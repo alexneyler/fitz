@@ -50,6 +50,12 @@ skill_url="https://raw.githubusercontent.com/alexneyler/fitz/main/skills/create-
 mkdir -p "$skill_dir"
 curl -fsSL "$skill_url" -o "$skill_dir/SKILL.md"
 
+# Install the update-fitz skill for Copilot CLI.
+status_skill_dir="$HOME/.agents/skills/update-fitz"
+status_skill_url="https://raw.githubusercontent.com/alexneyler/fitz/main/skills/update-fitz/SKILL.md"
+mkdir -p "$status_skill_dir"
+curl -fsSL "$status_skill_url" -o "$status_skill_dir/SKILL.md"
+
 echo ""
 echo "fitz installed successfully!"
 echo "Run 'source $rc_file' to update your current shell, or open a new terminal."

@@ -3,6 +3,7 @@ package cliapp
 import (
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"fitz/internal/session"
+	"fitz/internal/status"
 	"fitz/internal/worktree"
 )
 
@@ -53,6 +55,7 @@ type brModel struct {
 
 	// session info keyed by worktree path
 	sessions map[string]session.SessionInfo
+	statuses map[string]status.BranchStatus
 
 	// confirm delete state
 	confirmName string
@@ -95,6 +98,7 @@ func newBrModel(worktrees []worktree.WorktreeInfo, current string, sessions map[
 		current:     current,
 		cursor:      cursor,
 		sessions:    sessions,
+		statuses:    map[string]status.BranchStatus{},
 		branchInput: bi,
 		promptInput: pi,
 		dissolving:  -1,
@@ -395,7 +399,7 @@ func (m brModel) viewList() string {
 
 		b.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, displayName)))
 		if i > 0 {
-			if badge := m.sessionBadge(wt.Path); badge != "" {
+			if badge := m.sessionBadge(wt); badge != "" {
 				b.WriteString(dimStyle.Render("  " + badge))
 			}
 		}
@@ -466,23 +470,43 @@ func (m brModel) viewNewPrompt() string {
 
 // sessionBadge returns a short status string for the given worktree path,
 // or "" if no session exists for it.
-func (m brModel) sessionBadge(worktreePath string) string {
-	info, ok := m.sessions[worktreePath]
-	if !ok || info.SessionID == "" {
+func (m brModel) sessionBadge(wt worktree.WorktreeInfo) string {
+	parts := make([]string, 0, 3)
+	branch := wt.Branch
+	if branch == "" {
+		branch = wt.Name
+	}
+
+	st := m.statuses[branch]
+	if st.PRURL != "" {
+		parts = append(parts, formatPRBadge(st.PRURL))
+	}
+
+	info, hasSession := m.sessions[wt.Path]
+	age := time.Duration(0)
+	if hasSession && info.SessionID != "" {
+		if info.UpdatedAt.IsZero() {
+			parts = append(parts, "· session exists")
+		} else {
+			age = time.Since(info.UpdatedAt)
+			if age < 2*time.Minute {
+				parts = append(parts, "⚡ working")
+			} else {
+				parts = append(parts, "· "+formatAge(age)+" ago")
+			}
+		}
+	}
+
+	if st.Message != "" {
+		parts = append(parts, st.Message)
+	} else if hasSession && info.SessionID != "" && info.Summary != "" && !info.UpdatedAt.IsZero() && age >= 2*time.Minute {
+		parts = append(parts, info.Summary)
+	}
+
+	if len(parts) == 0 {
 		return ""
 	}
-	if info.UpdatedAt.IsZero() {
-		return "· session exists"
-	}
-	age := time.Since(info.UpdatedAt)
-	if age < 2*time.Minute {
-		return "⚡ working"
-	}
-	badge := "· " + formatAge(age) + " ago"
-	if info.Summary != "" {
-		badge += "  " + info.Summary
-	}
-	return badge
+	return strings.Join(parts, "  ")
 }
 
 func formatAge(d time.Duration) string {
@@ -490,4 +514,14 @@ func formatAge(d time.Duration) string {
 		return fmt.Sprintf("%dm", int(d.Minutes()))
 	}
 	return fmt.Sprintf("%dh", int(d.Hours()))
+}
+
+var pullURLPattern = regexp.MustCompile(`/pull/([0-9]+)`)
+
+func formatPRBadge(prURL string) string {
+	label := "🔗 PR"
+	if m := pullURLPattern.FindStringSubmatch(prURL); len(m) == 2 {
+		label = "🔗 PR #" + m[1]
+	}
+	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", prURL, label)
 }
