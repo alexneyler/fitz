@@ -2,6 +2,8 @@
 
 ## Commands
 
+### Human commands
+
 - `fitz` (no args) — prints help/usage.
   - Example: `fitz`
 - `fitz help` — prints help/usage.
@@ -46,7 +48,7 @@
 - `fitz br rm --all [--force]` — remove all worktrees and their branches.
   - Example: `fitz br rm --all`
   - Example: `fitz br rm --all --force`
-- `fitz br list` — interactive worktree list (same as `fitz br`). Navigate with ↑/↓/j/k, press enter to switch worktrees (executes `fitz br go`), d to delete a worktree (with confirmation), n to create a new worktree (prompts for name and action), p to publish (push + create PR), or q/esc/ctrl+c to quit.
+- `fitz br list` — interactive worktree list (same as `fitz br`).
   - Example: `fitz br list`
 - `fitz br cd <name>` — print the path to a worktree (for shell integration).
   - Example: `fitz br cd feature-login`
@@ -63,6 +65,15 @@
 - `fitz todo help` — show todo usage and available subcommands.
   - Example: `fitz todo help`
 
+### Agent commands (humans can run these too)
+
+- `fitz agent status [--pr <url>] [message]` — save status for the current branch. Use message, PR URL, or both.
+  - Example: `fitz agent status "Implementing auth module"`
+  - Example: `fitz agent status --pr https://github.com/owner/repo/pull/42`
+  - Example: `fitz agent status --pr https://github.com/owner/repo/pull/42 "PR created"`
+- `fitz agent help` — show agent usage and available subcommands.
+  - Example: `fitz agent help`
+
 ## Help output
 
 `fitz` and `fitz help` currently print:
@@ -72,6 +83,7 @@ fitz <version>
 Usage: fitz <command>
 
 Commands:
+  agent         Workflow commands for agents to execute
   br            Manage worktrees
   completion    Print shell completion script
   config        Get and set configuration values

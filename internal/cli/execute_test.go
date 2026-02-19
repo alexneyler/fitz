@@ -249,3 +249,76 @@ func TestExecuteHelpListsTodo(t *testing.T) {
 		t.Fatalf("stdout = %q, want 'todo' listed", out.String())
 	}
 }
+
+func TestExecuteHelpListsAgent(t *testing.T) {
+	var out, errOut bytes.Buffer
+	stdin := strings.NewReader("")
+	err := Execute([]string{"help"}, stdin, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "agent") {
+		t.Fatalf("stdout = %q, want 'agent' listed", out.String())
+	}
+}
+
+func TestExecuteAgentStatus(t *testing.T) {
+	prev := runAgentStatus
+	t.Cleanup(func() { runAgentStatus = prev })
+
+	var gotMessage, gotPR string
+	runAgentStatus = func(w io.Writer, message, prURL string) error {
+		gotMessage = message
+		gotPR = prURL
+		return nil
+	}
+
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"agent", "status", "--pr", "https://github.com/acme/repo/pull/42", "ready for review"}, strings.NewReader(""), &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotMessage != "ready for review" {
+		t.Fatalf("message = %q", gotMessage)
+	}
+	if gotPR != "https://github.com/acme/repo/pull/42" {
+		t.Fatalf("pr = %q", gotPR)
+	}
+}
+
+func TestParseAgentStatusArgs(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		wantMessage string
+		wantPR      string
+		wantErr     bool
+	}{
+		{name: "message only", args: []string{"Implementing auth"}, wantMessage: "Implementing auth"},
+		{name: "pr only", args: []string{"--pr", "https://github.com/acme/repo/pull/42"}, wantPR: "https://github.com/acme/repo/pull/42"},
+		{name: "message and pr", args: []string{"--pr", "https://github.com/acme/repo/pull/42", "Ready"}, wantMessage: "Ready", wantPR: "https://github.com/acme/repo/pull/42"},
+		{name: "missing pr value", args: []string{"--pr"}, wantErr: true},
+		{name: "empty update", args: nil, wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			message, prURL, err := parseAgentStatusArgs(tc.args)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if message != tc.wantMessage {
+				t.Fatalf("message = %q, want %q", message, tc.wantMessage)
+			}
+			if prURL != tc.wantPR {
+				t.Fatalf("pr = %q, want %q", prURL, tc.wantPR)
+			}
+		})
+	}
+}

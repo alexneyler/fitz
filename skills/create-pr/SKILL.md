@@ -17,6 +17,7 @@ When asked to create a pull request for the current branch, follow these steps:
    - A bullet list of notable changes if there are multiple commits.
    - Any testing notes (e.g. "run `make test`").
 5. **Create the PR** — use the GitHub MCP server's `create_pull_request` tool (or `gh pr create`) with the title and body you wrote. Target the default branch.
-6. **Report the result** — output the PR URL.
+6. **Update fitz status** — run `fitz agent status --pr <pr-url> "PR created"` so `fitz br list` reflects that the PR is open.
+7. **Report the result** — output the PR URL.
 
 Keep the description under 300 words. Do not include the full diff in the PR body.
