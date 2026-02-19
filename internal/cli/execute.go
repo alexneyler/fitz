@@ -25,8 +25,9 @@ type Subcommand interface {
 // All commands with sub-subcommands must be registered here.
 var subcommands = map[string]Subcommand{
 	"agent": agentCommand{},
-	"br":    brCommand{},
-	"todo":  todoCommand{},
+	"br":     brCommand{},
+	"config": configCommand{},
+	"todo":   todoCommand{},
 }
 
 type commandLine struct {
@@ -105,6 +106,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  agent         Workflow commands for agents to execute")
 	fmt.Fprintln(w, "  br            Manage worktrees")
 	fmt.Fprintln(w, "  completion    Print shell completion script")
+	fmt.Fprintln(w, "  config        Get and set configuration values")
 	fmt.Fprintln(w, "  help          Show this help message")
 	fmt.Fprintln(w, "  todo          Quick per-repo todo list")
 	fmt.Fprintln(w, "  update        Update fitz to the latest release")
