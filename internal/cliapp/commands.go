@@ -185,9 +185,10 @@ func Completion(_ context.Context, w io.Writer, args []string) error {
 }
 
 const bashCompletionScript = `fitz() {
-  if [[ "$1" == "br" && "$2" == "cd" && -n "$3" ]]; then
+  if [[ "$1" == "br" && -n "$3" && ( "$2" == "cd" || "$2" == "go" ) ]]; then
     local dir
-    dir="$(command fitz br cd "$3")" && cd "$dir"
+    dir="$(command fitz br cd "$3")" && cd "$dir" || return
+    [[ "$2" == "go" ]] && command fitz "$@"
   else
     command fitz "$@"
   fi
@@ -230,9 +231,10 @@ complete -F _fitz_completion fitz
 const zshCompletionScript = `#compdef fitz
 
 fitz() {
-  if [[ "$1" == "br" && "$2" == "cd" && -n "$3" ]]; then
+  if [[ "$1" == "br" && -n "$3" && ( "$2" == "cd" || "$2" == "go" ) ]]; then
     local dir
-    dir="$(command fitz br cd "$3")" && cd "$dir"
+    dir="$(command fitz br cd "$3")" && cd "$dir" || return
+    [[ "$2" == "go" ]] && command fitz "$@"
   else
     command fitz "$@"
   fi
