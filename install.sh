@@ -61,6 +61,13 @@ mkdir -p "$status_skill_dir"
 curl -fsSL "$status_skill_url" -o "$status_skill_dir/SKILL.md"
 ln -snf "$status_skill_dir" "$copilot_skill_root/update-fitz"
 
+# Install the review skill for Copilot CLI.
+review_skill_dir="$HOME/.agents/skills/review"
+review_skill_url="https://raw.githubusercontent.com/alexneyler/fitz/main/skills/review/SKILL.md"
+mkdir -p "$review_skill_dir"
+curl -fsSL "$review_skill_url" -o "$review_skill_dir/SKILL.md"
+ln -snf "$review_skill_dir" "$copilot_skill_root/review"
+
 echo ""
 echo "fitz installed successfully!"
 echo "Run 'source $rc_file' to update your current shell, or open a new terminal."

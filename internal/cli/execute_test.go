@@ -17,6 +17,13 @@ func TestExecuteKnownCommands(t *testing.T) {
 	}
 	t.Cleanup(func() { runUpdate = prev })
 
+	prevReview := runReview
+	runReview = func(_ context.Context, w io.Writer, prompt string) error {
+		_, err := fmt.Fprintln(w, "review complete")
+		return err
+	}
+	t.Cleanup(func() { runReview = prevReview })
+
 	tests := []struct {
 		name string
 		args []string
@@ -28,6 +35,7 @@ func TestExecuteKnownCommands(t *testing.T) {
 		{name: "update", args: []string{"update"}, want: "updated from fitz_test"},
 		{name: "completion bash", args: []string{"completion", "bash"}, want: "complete -F _fitz_completion fitz"},
 		{name: "completion zsh", args: []string{"completion", "zsh"}, want: "compdef _fitz fitz"},
+		{name: "review", args: []string{"review"}, want: "review complete"},
 	}
 
 	for _, tc := range tests {
@@ -259,6 +267,39 @@ func TestExecuteHelpListsAgent(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "agent") {
 		t.Fatalf("stdout = %q, want 'agent' listed", out.String())
+	}
+}
+
+func TestExecuteHelpListsReview(t *testing.T) {
+	var out, errOut bytes.Buffer
+	stdin := strings.NewReader("")
+	err := Execute([]string{"help"}, stdin, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "review") {
+		t.Fatalf("stdout = %q, want 'review' listed", out.String())
+	}
+}
+
+func TestExecuteReviewForwardsPrompt(t *testing.T) {
+	prev := runReview
+	t.Cleanup(func() { runReview = prev })
+
+	var gotPrompt string
+	runReview = func(_ context.Context, w io.Writer, prompt string) error {
+		gotPrompt = prompt
+		_, err := fmt.Fprintln(w, "ok")
+		return err
+	}
+
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"review", "focus", "auth", "flows"}, strings.NewReader(""), &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotPrompt != "focus auth flows" {
+		t.Fatalf("prompt = %q, want %q", gotPrompt, "focus auth flows")
 	}
 }
 
