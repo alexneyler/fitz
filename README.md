@@ -1,6 +1,6 @@
 # fitz
 
-Small CLI with a stable v1 command surface.
+Fitz is an opionated Copilot CLI manager with built-in worktree management so you can create, switch, and resume parallel coding sessions from one command surface.
 
 ## Install
 
