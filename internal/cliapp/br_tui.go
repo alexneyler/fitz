@@ -360,6 +360,31 @@ func (m brModel) viewList() string {
 
 	b.WriteString("Worktrees (↑/↓ navigate, enter go, d remove, n new, p publish, q quit)\n\n")
 
+	// Compute max branch name width for column alignment.
+	maxNameLen := 0
+	for i, wt := range m.worktrees {
+		name := wt.Branch
+		if i == 0 {
+			name = "root"
+		} else if name == "" {
+			name = wt.Name
+		}
+		if len(name) > maxNameLen {
+			maxNameLen = len(name)
+		}
+	}
+	if maxNameLen < 10 {
+		maxNameLen = 10
+	}
+
+	const prCol = 10
+	const statusCol = 10
+
+	// Column header
+	header := fmt.Sprintf("     %-*s  %-*s  %-*s  %s", maxNameLen, "BRANCH", prCol, "PR", statusCol, "STATUS", "MESSAGE")
+	b.WriteString(dimStyle.Render(header))
+	b.WriteString("\n")
+
 	for i, wt := range m.worktrees {
 		name := wt.Branch
 		if i == 0 {
@@ -369,24 +394,21 @@ func (m brModel) viewList() string {
 		}
 
 		isCurrent := (i == 0 && m.current == "root") || (i > 0 && m.current == wt.Name)
-		cursor := "  "
+
+		prefix := "     "
 		style := dimStyle
 
 		if i == 0 {
-			// Root is always dimmed and marked with *.
 			if isCurrent {
-				cursor = "* "
-			} else {
-				cursor = "  "
+				prefix = "  *  "
 			}
 			style = dimStyle
 		} else {
-			// Non-root worktrees.
 			if i == m.cursor {
-				cursor = "▸ "
+				prefix = "  ▸  "
 				style = selectedStyle
 			} else if isCurrent {
-				cursor = "* "
+				prefix = "  *  "
 				style = lipgloss.NewStyle().Foreground(lipgloss.Color("33")) // cyan
 			}
 		}
@@ -397,10 +419,29 @@ func (m brModel) viewList() string {
 			displayName = dissolveText(name, m.dissolveFrame, dissolveFrames, rng)
 		}
 
-		b.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, displayName)))
+		b.WriteString(style.Render(fmt.Sprintf("%s%-*s", prefix, maxNameLen, displayName)))
+
 		if i > 0 {
-			if badge := m.sessionBadge(wt); badge != "" {
-				b.WriteString(dimStyle.Render("  " + badge))
+			pr, statusText, message := m.badgeParts(wt)
+			if pr != "" || statusText != "" || message != "" {
+				branch := wt.Branch
+				if branch == "" {
+					branch = wt.Name
+				}
+				st := m.statuses[branch]
+
+				prDisplay := pr
+				if prDisplay == "" {
+					prDisplay = "--"
+				}
+
+				prPadded := fmt.Sprintf("%-*s", prCol, prDisplay)
+				if st.PRURL != "" {
+					prPadded = fmt.Sprintf("\x1b]8;;%s\x1b\\%-*s\x1b]8;;\x1b\\", st.PRURL, prCol, prDisplay)
+				}
+
+				meta := fmt.Sprintf("  %s  %-*s  %s", prPadded, statusCol, statusText, message)
+				b.WriteString(dimStyle.Render(meta))
 			}
 		}
 		b.WriteString("\n")
@@ -468,10 +509,8 @@ func (m brModel) viewNewPrompt() string {
 	return b.String()
 }
 
-// sessionBadge returns a short status string for the given worktree path,
-// or "" if no session exists for it.
-func (m brModel) sessionBadge(wt worktree.WorktreeInfo) string {
-	parts := make([]string, 0, 3)
+// badgeParts returns the individual metadata fields for a worktree row.
+func (m brModel) badgeParts(wt worktree.WorktreeInfo) (pr, statusStr, message string) {
 	branch := wt.Branch
 	if branch == "" {
 		branch = wt.Name
@@ -479,34 +518,31 @@ func (m brModel) sessionBadge(wt worktree.WorktreeInfo) string {
 
 	st := m.statuses[branch]
 	if st.PRURL != "" {
-		parts = append(parts, formatPRBadge(st.PRURL))
+		pr = formatPRLabel(st.PRURL)
 	}
 
 	info, hasSession := m.sessions[wt.Path]
 	age := time.Duration(0)
 	if hasSession && info.SessionID != "" {
 		if info.UpdatedAt.IsZero() {
-			parts = append(parts, "· session exists")
+			statusStr = "session"
 		} else {
 			age = time.Since(info.UpdatedAt)
 			if age < 2*time.Minute {
-				parts = append(parts, "⚡ working")
+				statusStr = "working"
 			} else {
-				parts = append(parts, "· "+formatAge(age)+" ago")
+				statusStr = formatAge(age) + " ago"
 			}
 		}
 	}
 
 	if st.Message != "" {
-		parts = append(parts, st.Message)
+		message = st.Message
 	} else if hasSession && info.SessionID != "" && info.Summary != "" && !info.UpdatedAt.IsZero() && age >= 2*time.Minute {
-		parts = append(parts, info.Summary)
+		message = info.Summary
 	}
 
-	if len(parts) == 0 {
-		return ""
-	}
-	return strings.Join(parts, "  ")
+	return
 }
 
 func formatAge(d time.Duration) string {
@@ -518,10 +554,10 @@ func formatAge(d time.Duration) string {
 
 var pullURLPattern = regexp.MustCompile(`/pull/([0-9]+)`)
 
-func formatPRBadge(prURL string) string {
-	label := "🔗 PR"
+func formatPRLabel(prURL string) string {
+	label := "PR"
 	if m := pullURLPattern.FindStringSubmatch(prURL); len(m) == 2 {
-		label = "🔗 PR #" + m[1]
+		label = "PR #" + m[1]
 	}
-	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", prURL, label)
+	return label
 }
