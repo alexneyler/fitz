@@ -57,6 +57,9 @@
   - Example: `fitz br publish feature-login`
 - `fitz br help` — show br usage and available subcommands.
   - Example: `fitz br help`
+- `fitz review [focus...]` — review the current branch. On the default branch, creates a worktree. On a feature branch, reviews the diff against the default branch. Shows live progress and prints a consolidated actionable list.
+  - Example: `fitz review`
+  - Example: `fitz review auth and permission checks`
 - `fitz todo <text>` — add a new todo item for the current repo.
   - Example: `fitz todo "fix the login bug"`
   - Example: `fitz todo remember to update docs`
@@ -88,6 +91,7 @@ Commands:
   completion    Print shell completion script
   config        Get and set configuration values
   help          Show this help message
+  review        Review the current branch codebase
   todo          Quick per-repo todo list
   update        Update fitz to the latest release
   version       Print version information

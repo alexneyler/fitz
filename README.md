@@ -35,6 +35,7 @@ The installer installs agent skills to improve the experience with fitz.
   - Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`. Repo config overrides global, which overrides defaults.
   - `fitz config help` — show config usage and available subcommands.
 - `fitz help` — print usage.
+- `fitz review [focus...]` — review the current branch. On the default branch, creates a worktree for the review. On a feature branch, reviews the diff against the default branch. Shows live progress and prints a consolidated actionable list.
 - `fitz todo` — quick per-repo todo list.
   - `fitz todo <text>` — add a new todo item.
   - `fitz todo list` — interactive TUI (enter: create worktree, d: mark done, add new inline).

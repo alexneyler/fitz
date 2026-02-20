@@ -14,6 +14,7 @@ import (
 var Version = "dev"
 var runUpdate = cliapp.Update
 var runAgentStatus = cliapp.AgentStatus
+var runReview = cliapp.Review
 
 // Subcommand represents a command that has its own sub-subcommands.
 // Any such command must provide a Help method.
@@ -27,6 +28,7 @@ var subcommands = map[string]Subcommand{
 	"agent":  agentCommand{},
 	"br":     brCommand{},
 	"config": configCommand{},
+	"review": reviewCommand{},
 	"todo":   todoCommand{},
 }
 
@@ -36,9 +38,10 @@ type commandLine struct {
 	Completion struct {
 		Shell string `arg:"" optional:"" help:"Target shell (bash or zsh)."`
 	} `cmd:"" help:"Print shell completion script."`
-	Agent struct{} `cmd:"" help:"Workflow commands for agents to execute."`
-	Br    struct{} `cmd:"" help:"Manage worktrees."`
-	Todo  struct{} `cmd:"" help:"Quick per-repo todo list."`
+	Agent  struct{} `cmd:"" help:"Workflow commands for agents to execute."`
+	Br     struct{} `cmd:"" help:"Manage worktrees."`
+	Review struct{} `cmd:"" help:"Review the current branch codebase."`
+	Todo   struct{} `cmd:"" help:"Quick per-repo todo list."`
 }
 
 func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
@@ -108,6 +111,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  completion    Print shell completion script")
 	fmt.Fprintln(w, "  config        Get and set configuration values")
 	fmt.Fprintln(w, "  help          Show this help message")
+	fmt.Fprintln(w, "  review        Review the current branch codebase")
 	fmt.Fprintln(w, "  todo          Quick per-repo todo list")
 	fmt.Fprintln(w, "  update        Update fitz to the latest release")
 	fmt.Fprintln(w, "  version       Print version information")
@@ -319,4 +323,20 @@ func (t todoCommand) Run(ctx context.Context, args []string, stdin io.Reader, st
 		text := strings.Join(args, " ")
 		return cliapp.TodoAdd(ctx, stdout, text)
 	}
+}
+
+type reviewCommand struct{}
+
+func (reviewCommand) Help(w io.Writer) {
+	fmt.Fprintln(w, "Usage: fitz review [focus...]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Review the current branch codebase.")
+	fmt.Fprintln(w, "On the default branch, creates a worktree for the review.")
+	fmt.Fprintln(w, "On a feature branch, reviews the diff against the default branch.")
+	fmt.Fprintln(w, "Shows live progress updates while running.")
+}
+
+func (reviewCommand) Run(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+	prompt := strings.Join(args, " ")
+	return runReview(ctx, stdout, prompt)
 }

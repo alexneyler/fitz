@@ -200,7 +200,7 @@ _fitz_completion() {
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
   if [[ ${COMP_CWORD} -eq 1 ]]; then
-    COMPREPLY=( $(compgen -W "help version update completion agent br todo" -- "$cur") )
+    COMPREPLY=( $(compgen -W "help version update completion agent br review todo" -- "$cur") )
     return
   fi
 
@@ -242,7 +242,7 @@ fitz() {
 
 _fitz() {
   local -a commands shells br_cmds agent_cmds todo_cmds
-  commands=(help version update completion agent br todo)
+  commands=(help version update completion agent br review todo)
   shells=(bash zsh)
   br_cmds=(new go rm list cd publish help)
   agent_cmds=(status help)

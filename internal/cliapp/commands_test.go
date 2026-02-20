@@ -74,6 +74,20 @@ func TestCompletionScriptsHandleBrGoByChangingDirectory(t *testing.T) {
 	}
 }
 
+func TestCompletionScriptsIncludeReviewCommand(t *testing.T) {
+	tests := [][]string{{"bash"}, {"zsh"}}
+
+	for _, args := range tests {
+		var out bytes.Buffer
+		if err := Completion(context.Background(), &out, args); err != nil {
+			t.Fatalf("Completion returned error: %v", err)
+		}
+		if !strings.Contains(out.String(), "review") {
+			t.Fatalf("script = %q, want review command completion", out.String())
+		}
+	}
+}
+
 func TestSelectAsset(t *testing.T) {
 	assets := []githubAsset{
 		{Name: "fitz_linux_amd64", DownloadURL: "https://example.invalid/linux"},
