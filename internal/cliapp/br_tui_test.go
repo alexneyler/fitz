@@ -415,7 +415,7 @@ func TestViewListNoSessionNoBadge(t *testing.T) {
 
 	view := m.View()
 
-	if strings.Contains(view, "ago") || strings.Contains(view, "⚡") {
+	if strings.Contains(view, "ago") || strings.Contains(view, "working") {
 		t.Errorf("expected no badge for worktree with no session, got:\n%s", view)
 	}
 }
@@ -436,8 +436,20 @@ func TestViewListWorkingBadge(t *testing.T) {
 
 	view := m.View()
 
-	if !strings.Contains(view, "⚡ working") {
+	if !strings.Contains(view, "working") {
 		t.Errorf("expected working badge for recent session, got:\n%s", view)
+	}
+}
+
+func TestViewListShowsColumnHeader(t *testing.T) {
+	worktrees := []worktree.WorktreeInfo{
+		{Path: "/repo", Branch: "", Name: "repo"},
+		{Path: "/repo/.fitz/feature-a", Branch: "feature-a", Name: "feature-a"},
+	}
+	m := newBrModel(worktrees, "root", nil)
+	view := m.View()
+	if !strings.Contains(view, "BRANCH") || !strings.Contains(view, "STATUS") {
+		t.Errorf("expected column headers in view, got:\n%s", view)
 	}
 }
 
