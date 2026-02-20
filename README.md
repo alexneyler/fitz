@@ -8,7 +8,7 @@ Small CLI with a stable v1 command surface.
 curl -fsSL https://raw.githubusercontent.com/alexneyler/fitz/main/install.sh | sh
 ```
 
-The installer downloads the latest release binary into `~/.fitz/bin/fitz`, adds `~/.fitz/bin` to PATH in your shell rc file, appends shell completion setup, and installs the `create-pr` and `update-fitz` Copilot skills into `~/.agents/skills/`.
+The installer installs agent skills to improve the experience with fitz.
 
 ## Commands
 
