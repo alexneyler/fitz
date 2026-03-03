@@ -4,10 +4,10 @@ import "testing"
 
 func TestParseVersion(t *testing.T) {
 	tests := []struct {
-		input                          string
-		major, minor, patch            int
-		prerelease                     string
-		wantErr                        bool
+		input               string
+		major, minor, patch int
+		prerelease          string
+		wantErr             bool
 	}{
 		{input: "v0.7.0", major: 0, minor: 7, patch: 0},
 		{input: "v1.2.3", major: 1, minor: 2, patch: 3},
