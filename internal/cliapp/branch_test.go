@@ -405,7 +405,7 @@ func TestLaunchBranchInteractive_Zellij_UsesConfiguredLayout(t *testing.T) {
 	var out bytes.Buffer
 	wtPath := t.TempDir()
 	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij", BranchZellijLayout: "horizontal"}
-	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg); err != nil {
+	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", "myrepo", cfg); err != nil {
 		t.Fatalf("launchBranchInteractive: %v", err)
 	}
 
@@ -461,7 +461,7 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	var out bytes.Buffer
 	wtPath := t.TempDir()
 	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij"}
-	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg); err != nil {
+	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", "myrepo", cfg); err != nil {
 		t.Fatalf("launchBranchInteractive: %v", err)
 	}
 
@@ -476,6 +476,17 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	}
 	if calledDir != wtPath {
 		t.Fatalf("dir = %q, want %q", calledDir, wtPath)
+	}
+
+	// Verify tab name includes repo name
+	var tabName string
+	for i := 0; i < len(calledArgs)-1; i++ {
+		if calledArgs[i] == "--name" {
+			tabName = calledArgs[i+1]
+		}
+	}
+	if tabName != "myrepo/feature-zellij" {
+		t.Fatalf("tab name = %q, want %q", tabName, "myrepo/feature-zellij")
 	}
 
 	var layoutPath string
@@ -520,7 +531,7 @@ func TestLaunchBranchInteractive_ZellijRequiresSessionContext(t *testing.T) {
 	var out bytes.Buffer
 	wtPath := t.TempDir()
 	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij"}
-	err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg)
+	err := launchBranchInteractive(&out, wtPath, "feature-zellij", "myrepo", cfg)
 	if err == nil {
 		t.Fatal("expected error when not in zellij and no session name is available")
 	}
