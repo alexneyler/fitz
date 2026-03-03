@@ -244,9 +244,9 @@ func TestCopilotBaseArgs_NoModel(t *testing.T) {
 }
 
 func TestCopilotBaseArgs_WithModel(t *testing.T) {
-	cfg := config.Config{Model: "gpt-5.3-codex"}
+	cfg := config.Config{Model: "claude-opus-4.6"}
 	args := copilotBaseArgs(cfg)
-	want := []string{"copilot", "--model", "gpt-5.3-codex"}
+	want := []string{"copilot", "--model", "claude-opus-4.6"}
 	if len(args) != len(want) {
 		t.Fatalf("copilotBaseArgs = %v, want %v", args, want)
 	}

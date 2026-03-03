@@ -19,7 +19,7 @@ type Config struct {
 // DefaultConfig returns the hardcoded default configuration.
 func DefaultConfig() Config {
 	return Config{
-		Model:              "gpt-5.3-codex",
+		Model:              "claude-opus-4.6",
 		Agent:              "copilot-cli",
 		BranchOpenMode:     "zellij",
 		BranchZellijLayout: "vertical",
