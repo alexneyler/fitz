@@ -16,6 +16,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Agent != "copilot-cli" {
 		t.Errorf("default agent = %q, want %q", cfg.Agent, "copilot-cli")
 	}
+	if cfg.BranchOpenMode != "zellij" {
+		t.Errorf("default branch open mode = %q, want %q", cfg.BranchOpenMode, "zellij")
+	}
 }
 
 func TestGlobalConfigPath(t *testing.T) {
@@ -188,13 +191,16 @@ func TestLoadEffective_NoRepoOwner(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	cfg := config.Config{Model: "m", Agent: "a"}
+	cfg := config.Config{Model: "m", Agent: "a", BranchOpenMode: "legacy"}
 
 	if v, ok := config.Get(cfg, "model"); !ok || v != "m" {
 		t.Errorf("Get model = %q, %v; want %q, true", v, ok, "m")
 	}
 	if v, ok := config.Get(cfg, "agent"); !ok || v != "a" {
 		t.Errorf("Get agent = %q, %v; want %q, true", v, ok, "a")
+	}
+	if v, ok := config.Get(cfg, "branch-open-mode"); !ok || v != "legacy" {
+		t.Errorf("Get branch-open-mode = %q, %v; want %q, true", v, ok, "legacy")
 	}
 	if _, ok := config.Get(cfg, "unknown"); ok {
 		t.Error("Get unknown should return ok=false")
@@ -214,6 +220,15 @@ func TestSet(t *testing.T) {
 		t.Errorf("Set agent: got %+v, err=%v", cfg3, err)
 	}
 
+	cfg4, err := config.Set(cfg, "branch-open-mode", "legacy")
+	if err != nil || cfg4.BranchOpenMode != "legacy" {
+		t.Errorf("Set branch-open-mode: got %+v, err=%v", cfg4, err)
+	}
+
+	if _, err := config.Set(cfg, "branch-open-mode", "nope"); err == nil {
+		t.Error("Set invalid branch-open-mode should return error")
+	}
+
 	_, err = config.Set(cfg, "unknown", "v")
 	if err == nil {
 		t.Error("Set unknown key should return error")
@@ -221,7 +236,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestUnset(t *testing.T) {
-	cfg := config.Config{Model: "m", Agent: "a"}
+	cfg := config.Config{Model: "m", Agent: "a", BranchOpenMode: "legacy"}
 
 	cfg2, err := config.Unset(cfg, "model")
 	if err != nil || cfg2.Model != "" {
@@ -231,6 +246,11 @@ func TestUnset(t *testing.T) {
 	cfg3, err := config.Unset(cfg, "agent")
 	if err != nil || cfg3.Agent != "" {
 		t.Errorf("Unset agent: got %+v, err=%v", cfg3, err)
+	}
+
+	cfg4, err := config.Unset(cfg, "branch-open-mode")
+	if err != nil || cfg4.BranchOpenMode != "" {
+		t.Errorf("Unset branch-open-mode: got %+v, err=%v", cfg4, err)
 	}
 
 	_, err = config.Unset(cfg, "unknown")
@@ -247,7 +267,7 @@ func TestKeys(t *testing.T) {
 	for _, k := range config.Keys {
 		found[k] = true
 	}
-	for _, required := range []string{"model", "agent"} {
+	for _, required := range []string{"model", "agent", "branch-open-mode"} {
 		if !found[required] {
 			t.Errorf("Keys missing %q", required)
 		}

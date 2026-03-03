@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -77,6 +78,17 @@ var runBackground = func(binary string, args []string, dir string) error {
 	return cmd.Start()
 }
 
+var runCommand = func(binary string, args []string, dir string) error {
+	cmd := exec.Command(binary, args...)
+	cmd.Dir = dir
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s %v: %w: %s", filepath.Base(binary), args, err, stderr.String())
+	}
+	return nil
+}
+
 func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -91,14 +103,13 @@ func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 		return fmt.Errorf("create worktree: %w", err)
 	}
 
-	copilotPath, err := lookPath("copilot")
-	if err != nil {
-		return errors.New("copilot not found in PATH")
-	}
-
 	cfg := loadEffectiveConfig(cwd)
 
 	if prompt != "" {
+		copilotPath, err := lookPath("copilot")
+		if err != nil {
+			return errors.New("copilot not found in PATH")
+		}
 		args := append(copilotBaseArgs(cfg), "--yolo", "-p", prompt)
 		if err := runBackground(copilotPath, args, path); err != nil {
 			return fmt.Errorf("start copilot: %w", err)
@@ -109,11 +120,7 @@ func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 		return nil
 	}
 
-	if err := os.Chdir(path); err != nil {
-		return fmt.Errorf("cd to worktree: %w", err)
-	}
-
-	return runExec(copilotPath, copilotBaseArgs(cfg), os.Environ())
+	return launchBranchInteractive(w, path, name, cfg)
 }
 
 // copilotConfigDir returns the Copilot configuration directory (~/.copilot).
@@ -144,6 +151,113 @@ func copilotBaseArgs(cfg config.Config) []string {
 		args = append(args, "--model", cfg.Model)
 	}
 	return args
+}
+
+func launchBranchInteractive(w io.Writer, path, name string, cfg config.Config) error {
+	mode := strings.TrimSpace(cfg.BranchOpenMode)
+	if mode == "" {
+		mode = "zellij"
+	}
+
+	switch mode {
+	case "legacy":
+		copilotPath, err := lookPath("copilot")
+		if err != nil {
+			return errors.New("copilot not found in PATH")
+		}
+		if err := os.Chdir(path); err != nil {
+			return fmt.Errorf("cd to worktree: %w", err)
+		}
+		return runExec(copilotPath, copilotBaseArgs(cfg), os.Environ())
+	case "zellij":
+		return openBranchInZellij(w, path, name, cfg)
+	default:
+		return fmt.Errorf("invalid branch-open-mode: %s (valid values: zellij, legacy)", mode)
+	}
+}
+
+func openBranchInZellij(w io.Writer, path, name string, cfg config.Config) error {
+	if _, err := lookPath("copilot"); err != nil {
+		return errors.New("copilot not found in PATH")
+	}
+	zellijPath, err := lookPath("zellij")
+	if err != nil {
+		return errors.New("zellij not found in PATH")
+	}
+	inZellij := strings.TrimSpace(os.Getenv("ZELLIJ")) != ""
+	sessionName := strings.TrimSpace(os.Getenv("ZELLIJ_SESSION_NAME"))
+	if !inZellij && sessionName == "" {
+		return errors.New("zellij mode requires an active zellij session; run from inside zellij or set branch-open-mode=legacy")
+	}
+
+	layoutPath, err := writeZellijBranchLayout(copilotBaseArgs(cfg))
+	if err != nil {
+		return fmt.Errorf("create zellij layout: %w", err)
+	}
+	defer os.Remove(layoutPath)
+
+	args := []string{}
+	if sessionName != "" {
+		args = append(args, "--session", sessionName)
+	}
+	args = append(args, "action", "new-tab", "--name", name, "--cwd", path, "--layout", layoutPath)
+	if err := runCommand(zellijPath, args, path); err != nil {
+		return fmt.Errorf("open zellij tab: %w", err)
+	}
+
+	fmt.Fprintf(w, "worktree created: %s\n", name)
+	fmt.Fprintln(w, "opened in zellij")
+	return nil
+}
+
+func writeZellijBranchLayout(copilotArgs []string) (string, error) {
+	file, err := os.CreateTemp("", "fitz-zellij-*.kdl")
+	if err != nil {
+		return "", err
+	}
+	layoutPath := file.Name()
+	if _, err := file.WriteString(zellijBranchLayout(copilotArgs)); err != nil {
+		file.Close()
+		_ = os.Remove(layoutPath)
+		return "", err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(layoutPath)
+		return "", err
+	}
+	return layoutPath, nil
+}
+
+func zellijBranchLayout(copilotArgs []string) string {
+	if len(copilotArgs) == 0 {
+		copilotArgs = []string{"copilot"}
+	}
+
+	var b strings.Builder
+	b.WriteString("layout {\n")
+	b.WriteString("    pane size=1 borderless=true {\n")
+	b.WriteString("        plugin location=\"tab-bar\"\n")
+	b.WriteString("    }\n")
+	b.WriteString("    pane split_direction=\"vertical\" {\n")
+	b.WriteString("        pane command=")
+	b.WriteString(strconv.Quote(copilotArgs[0]))
+	b.WriteString(" {\n")
+	if len(copilotArgs) > 1 {
+		b.WriteString("            args")
+		for _, arg := range copilotArgs[1:] {
+			b.WriteString(" ")
+			b.WriteString(strconv.Quote(arg))
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("        }\n")
+	b.WriteString("        pane\n")
+	b.WriteString("    }\n")
+	b.WriteString("    pane size=1 borderless=true {\n")
+	b.WriteString("        plugin location=\"status-bar\"\n")
+	b.WriteString("    }\n")
+	b.WriteString("}\n")
+	return b.String()
 }
 
 func BrGo(ctx context.Context, w io.Writer, name string) error {

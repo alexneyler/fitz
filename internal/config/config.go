@@ -10,15 +10,17 @@ import (
 
 // Config holds fitz user configuration. Zero values mean "not set".
 type Config struct {
-	Model string `json:"model,omitempty"`
-	Agent string `json:"agent,omitempty"`
+	Model          string `json:"model,omitempty"`
+	Agent          string `json:"agent,omitempty"`
+	BranchOpenMode string `json:"branch_open_mode,omitempty"`
 }
 
 // DefaultConfig returns the hardcoded default configuration.
 func DefaultConfig() Config {
 	return Config{
-		Model: "gpt-5.3-codex",
-		Agent: "copilot-cli",
+		Model:          "gpt-5.3-codex",
+		Agent:          "copilot-cli",
+		BranchOpenMode: "zellij",
 	}
 }
 
@@ -88,6 +90,9 @@ func merge(dst, src Config) Config {
 	if src.Agent != "" {
 		dst.Agent = src.Agent
 	}
+	if src.BranchOpenMode != "" {
+		dst.BranchOpenMode = src.BranchOpenMode
+	}
 	return dst
 }
 
@@ -128,6 +133,8 @@ func Get(cfg Config, key string) (string, bool) {
 		return cfg.Model, true
 	case "agent":
 		return cfg.Agent, true
+	case "branch-open-mode":
+		return cfg.BranchOpenMode, true
 	default:
 		return "", false
 	}
@@ -141,8 +148,13 @@ func Set(cfg Config, key, value string) (Config, error) {
 		cfg.Model = value
 	case "agent":
 		cfg.Agent = value
+	case "branch-open-mode":
+		if value != "zellij" && value != "legacy" {
+			return cfg, fmt.Errorf("invalid branch-open-mode: %s (valid values: zellij, legacy)", value)
+		}
+		cfg.BranchOpenMode = value
 	default:
-		return cfg, fmt.Errorf("unknown config key: %s (valid keys: model, agent)", key)
+		return cfg, fmt.Errorf("unknown config key: %s (valid keys: model, agent, branch-open-mode)", key)
 	}
 	return cfg, nil
 }
@@ -155,11 +167,13 @@ func Unset(cfg Config, key string) (Config, error) {
 		cfg.Model = ""
 	case "agent":
 		cfg.Agent = ""
+	case "branch-open-mode":
+		cfg.BranchOpenMode = ""
 	default:
-		return cfg, fmt.Errorf("unknown config key: %s (valid keys: model, agent)", key)
+		return cfg, fmt.Errorf("unknown config key: %s (valid keys: model, agent, branch-open-mode)", key)
 	}
 	return cfg, nil
 }
 
 // Keys returns the list of all valid config keys.
-var Keys = []string{"model", "agent"}
+var Keys = []string{"model", "agent", "branch-open-mode"}

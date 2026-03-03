@@ -16,7 +16,7 @@ The installer installs agent skills to improve the experience with fitz.
 
 - `fitz br` — manage worktrees.
   - `fitz br` — interactive worktree list with key bindings (↑/↓: navigate, enter: go, d: delete, n: new, p: publish, q: quit).
-  - `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. If a prompt is given (one or more words), copilot runs in the background with `--yolo`.
+  - `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. Without a prompt, opens a new zellij tab (default, in the active zellij session) with Copilot in the left pane and a shell in the right pane, both in the new worktree. If a prompt is given, Copilot runs in the background with `--yolo`.
   - `fitz br go <name>` — switch to a worktree.
   - `fitz br rm <name> [--force]` — remove a worktree and its branch.
   - `fitz br rm --all [--force]` — remove all worktrees and their branches.
@@ -31,8 +31,8 @@ The installer installs agent skills to improve the experience with fitz.
   - `fitz config unset <key>` — remove a config key (repo-level).
   - `fitz config list` — list all config keys and their values (repo-level).
   - Add `--global` to any subcommand to target global config (`~/.fitz/config.json`) instead.
-  - Valid keys: `model` (passed as `--model` to Copilot CLI), `agent` (agent framework; default: `copilot-cli`).
-  - Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`. Repo config overrides global, which overrides defaults.
+  - Valid keys: `model` (passed as `--model` to Copilot CLI), `agent` (agent framework; default: `copilot-cli`), `branch-open-mode` (`zellij` or `legacy`, default: `zellij`).
+  - Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`, `branch-open-mode=zellij`. Repo config overrides global, which overrides defaults.
   - `fitz config help` — show config usage and available subcommands.
 - `fitz help` — print usage.
 - `fitz review [focus...]` — review the current branch. On the default branch, creates a worktree for the review. On a feature branch, reviews the diff against the default branch. Shows live progress and prints a consolidated actionable list.
