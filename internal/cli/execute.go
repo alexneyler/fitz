@@ -205,6 +205,7 @@ func (brCommand) Help(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  cd        Print the path to a worktree")
+	fmt.Fprintln(w, "  co        Check out a pull request into a new worktree")
 	fmt.Fprintln(w, "  go        Switch to an existing worktree")
 	fmt.Fprintln(w, "  help      Show this help message")
 	fmt.Fprintln(w, "  list      List all worktrees")
@@ -228,6 +229,12 @@ func (b brCommand) Run(ctx context.Context, args []string, stdin io.Reader, stdo
 			return err
 		}
 		return cliapp.BrNew(ctx, stdout, name, base, prompt)
+
+	case "co":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: fitz br co <pr-number-or-url>")
+		}
+		return cliapp.BrCheckout(ctx, stdout, args[1])
 
 	case "go":
 		if len(args) < 2 {

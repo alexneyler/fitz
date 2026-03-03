@@ -3,12 +3,14 @@ package cliapp
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -87,6 +89,108 @@ var runCommand = func(binary string, args []string, dir string) error {
 		return fmt.Errorf("%s %v: %w: %s", filepath.Base(binary), args, err, stderr.String())
 	}
 	return nil
+}
+
+var prURLPattern = regexp.MustCompile(`/pull/(\d+)`)
+var prRepoPattern = regexp.MustCompile(`github\.com[/:]([^/]+)/([^/]+?)(?:\.git)?/pull/`)
+
+// parsePRNumber extracts a pull request number from various formats:
+// "42", "#42", or a full GitHub PR URL.
+func parsePRNumber(input string) (int, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return 0, errors.New("empty PR identifier")
+	}
+
+	// Try full URL first.
+	if m := prURLPattern.FindStringSubmatch(input); len(m) == 2 {
+		return strconv.Atoi(m[1])
+	}
+
+	// Strip leading '#'.
+	input = strings.TrimPrefix(input, "#")
+
+	n, err := strconv.Atoi(input)
+	if err != nil || n <= 0 {
+		return 0, fmt.Errorf("invalid PR number: %s", input)
+	}
+	return n, nil
+}
+
+type prInfo struct {
+	HeadRefName string `json:"headRefName"`
+	URL         string `json:"url"`
+}
+
+func BrCheckout(ctx context.Context, w io.Writer, pr string) error {
+	prNumber, err := parsePRNumber(pr)
+	if err != nil {
+		return err
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
+
+	// When the input is a full URL, pass it directly to gh so it resolves the
+	// correct repository (supports cross-repo URLs). Otherwise use the number.
+	ghArg := strconv.Itoa(prNumber)
+	if strings.Contains(pr, "/pull/") {
+		ghArg = strings.TrimSpace(pr)
+	}
+
+	// Fetch PR metadata via gh CLI.
+	out, err := runGh(cwd, "pr", "view", ghArg, "--json", "headRefName,url")
+	if err != nil {
+		return fmt.Errorf("get PR info: %w", err)
+	}
+
+	var info prInfo
+	if err := json.Unmarshal([]byte(out), &info); err != nil {
+		return fmt.Errorf("parse PR info: %w", err)
+	}
+	if info.HeadRefName == "" {
+		return fmt.Errorf("PR #%d has no head branch", prNumber)
+	}
+
+	git := worktree.ShellGit{}
+
+	// Verify the PR belongs to the current repo.
+	if m := prRepoPattern.FindStringSubmatch(info.URL); len(m) == 3 {
+		prOwner, prRepo := strings.ToLower(m[1]), strings.ToLower(m[2])
+		curOwner, curRepo, _ := worktree.RepoID(git, cwd)
+		curOwner, curRepo = strings.ToLower(curOwner), strings.ToLower(curRepo)
+		if curOwner != "" && (prOwner != curOwner || prRepo != curRepo) {
+			return fmt.Errorf("PR #%d belongs to %s/%s but you are in %s/%s; run from a %s/%s worktree",
+				prNumber, m[1], m[2], curOwner, curRepo, m[1], m[2])
+		}
+	}
+
+	// Fetch via the pull/<N>/head ref — this always works for PRs in the
+	// current repo, including fork PRs where the branch isn't on origin.
+	prRef := fmt.Sprintf("pull/%d/head", prNumber)
+	_, err = git.Run(cwd, "fetch", "origin", prRef)
+	if err != nil {
+		return fmt.Errorf("fetch PR #%d: %w", prNumber, err)
+	}
+
+	// Create a worktree with a new local branch starting at the fetched PR head.
+	mgr := &worktree.Manager{Git: git}
+	path, err := mgr.Create(cwd, info.HeadRefName, "FETCH_HEAD")
+	if err != nil {
+		return fmt.Errorf("create worktree: %w", err)
+	}
+
+	// Store PR URL so br list shows it.
+	if statusPath, err := resolveAgentStatusPath(); err == nil {
+		_, _ = status.SetPR(statusPath, info.HeadRefName, info.URL)
+	}
+
+	cfg := loadEffectiveConfig(cwd)
+
+	fmt.Fprintf(w, "checked out PR #%d (%s)\n", prNumber, info.HeadRefName)
+	return launchBranchInteractive(w, path, info.HeadRefName, cfg)
 }
 
 func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
