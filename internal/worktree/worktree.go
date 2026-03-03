@@ -98,6 +98,51 @@ func (m *Manager) Create(dir, name, base string) (string, error) {
 	return path, nil
 }
 
+// Checkout creates a worktree that checks out an existing branch or ref.
+// Unlike Create, it does not create a new branch (-b flag).
+func (m *Manager) Checkout(dir, name, trackingRef string) (string, error) {
+	if err := ValidateName(name); err != nil {
+		return "", err
+	}
+	owner, repo, err := RepoID(m.Git, dir)
+	if err != nil {
+		return "", err
+	}
+
+	homeDir := m.HomeDir
+	if homeDir == "" {
+		homeDir, err = os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("get home dir: %w", err)
+		}
+	}
+
+	dirName := DirName(name)
+	path := filepath.Join(homeDir, ".fitz", owner, repo, dirName)
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolve absolute path: %w", err)
+	}
+
+	expectedPrefix := filepath.Join(homeDir, ".fitz", owner, repo)
+	cleanAbsPath := filepath.Clean(absPath)
+	cleanPrefix := filepath.Clean(expectedPrefix)
+
+	if !strings.HasPrefix(cleanAbsPath+string(filepath.Separator), cleanPrefix+string(filepath.Separator)) {
+		return "", errors.New("worktree path would escape .fitz directory")
+	}
+
+	args := []string{"worktree", "add", path, trackingRef}
+
+	_, err = m.Git.Run(dir, args...)
+	if err != nil {
+		return "", err
+	}
+
+	return path, nil
+}
+
 func (m *Manager) Remove(dir, name string, force bool) error {
 	if err := ValidateName(name); err != nil {
 		return err

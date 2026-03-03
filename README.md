@@ -17,6 +17,7 @@ The installer installs agent skills to improve the experience with fitz.
 - `fitz br` — manage worktrees.
   - `fitz br` — interactive worktree list with key bindings (↑/↓: navigate, enter: go, d: delete, n: new, p: publish, q: quit).
   - `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. Without a prompt, opens a new zellij tab (default, in the active zellij session) with Copilot in the left pane and a shell in the right pane, both in the new worktree. If a prompt is given, Copilot runs in the background with `--yolo`.
+  - `fitz br co <pr-number-or-url>` — check out a pull request into a new worktree. Accepts a PR number (`42`), prefixed number (`#42`), or full GitHub PR URL. Fetches the PR's branch, creates a worktree, stores the PR link for `fitz br list`, and opens an interactive session.
   - `fitz br go <name>` — switch to a worktree.
   - `fitz br rm <name> [--force]` — remove a worktree and its branch.
   - `fitz br rm --all [--force]` — remove all worktrees and their branches.

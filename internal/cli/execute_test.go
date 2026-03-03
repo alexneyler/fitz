@@ -101,6 +101,7 @@ func TestExecuteBrCommands(t *testing.T) {
 		{name: "br go missing name", args: []string{"br", "go"}, wantErr: true},
 		{name: "br rm missing name", args: []string{"br", "rm"}, wantErr: true},
 		{name: "br cd missing name", args: []string{"br", "cd"}, wantErr: true},
+		{name: "br co missing pr", args: []string{"br", "co"}, wantErr: true},
 		{name: "br unknown subcommand", args: []string{"br", "wat"}, wantErr: true},
 	}
 
@@ -361,5 +362,17 @@ func TestParseAgentStatusArgs(t *testing.T) {
 				t.Fatalf("pr = %q, want %q", prURL, tc.wantPR)
 			}
 		})
+	}
+}
+
+func TestBrHelpListsCo(t *testing.T) {
+	var out, errOut bytes.Buffer
+	stdin := strings.NewReader("")
+	err := Execute([]string{"br", "help"}, stdin, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "co") {
+		t.Fatalf("stdout = %q, want 'co' listed", out.String())
 	}
 }
