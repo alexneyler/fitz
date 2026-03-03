@@ -11,7 +11,7 @@ import (
 
 func TestExecuteKnownCommands(t *testing.T) {
 	prev := runUpdate
-	runUpdate = func(_ context.Context, w io.Writer) error {
+	runUpdate = func(_ context.Context, w io.Writer, _ string, _ bool) error {
 		_, err := fmt.Fprintln(w, "updated from fitz_test")
 		return err
 	}
@@ -267,6 +267,27 @@ func TestExecuteHelpListsAgent(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "agent") {
 		t.Fatalf("stdout = %q, want 'agent' listed", out.String())
+	}
+}
+
+func TestExecuteUpdatePreviewFlag(t *testing.T) {
+	prev := runUpdate
+	t.Cleanup(func() { runUpdate = prev })
+
+	var gotPreview bool
+	runUpdate = func(_ context.Context, w io.Writer, _ string, preview bool) error {
+		gotPreview = preview
+		_, err := fmt.Fprintln(w, "updated")
+		return err
+	}
+
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"update", "--preview"}, strings.NewReader(""), &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !gotPreview {
+		t.Fatal("expected preview=true")
 	}
 }
 
