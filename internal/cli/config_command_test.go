@@ -203,6 +203,9 @@ func TestConfigList_Empty(t *testing.T) {
 	if !strings.Contains(out, "branch-open-mode=(not set)") {
 		t.Errorf("list output = %q, want branch-open-mode=(not set)", out)
 	}
+	if !strings.Contains(out, "branch-zellij-layout=(not set)") {
+		t.Errorf("list output = %q, want branch-zellij-layout=(not set)", out)
+	}
 }
 
 func TestConfigList_WithValues(t *testing.T) {
@@ -225,7 +228,7 @@ func TestConfigList_WithValues(t *testing.T) {
 func TestConfigSetAndGet_BranchOpenMode_Global(t *testing.T) {
 	dir := t.TempDir()
 
-	_, _, err := runConfigCmd(t, dir, []string{"--global", "set", "branch-open-mode", "legacy"})
+	_, _, err := runConfigCmd(t, dir, []string{"--global", "set", "branch-open-mode", "standard"})
 	if err != nil {
 		t.Fatalf("set: %v", err)
 	}
@@ -234,8 +237,8 @@ func TestConfigSetAndGet_BranchOpenMode_Global(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	if !strings.Contains(out, "legacy") {
-		t.Errorf("get output = %q, want %q", out, "legacy")
+	if !strings.Contains(out, "standard") {
+		t.Errorf("get output = %q, want %q", out, "standard")
 	}
 }
 
@@ -244,6 +247,31 @@ func TestConfigSet_BranchOpenMode_Invalid(t *testing.T) {
 	_, _, err := runConfigCmd(t, dir, []string{"--global", "set", "branch-open-mode", "invalid"})
 	if err == nil {
 		t.Fatal("expected error for invalid branch-open-mode")
+	}
+}
+
+func TestConfigSetAndGet_BranchZellijLayout_Global(t *testing.T) {
+	dir := t.TempDir()
+
+	_, _, err := runConfigCmd(t, dir, []string{"--global", "set", "branch-zellij-layout", "horizontal"})
+	if err != nil {
+		t.Fatalf("set: %v", err)
+	}
+
+	out, _, err := runConfigCmd(t, dir, []string{"--global", "get", "branch-zellij-layout"})
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if !strings.Contains(out, "horizontal") {
+		t.Errorf("get output = %q, want %q", out, "horizontal")
+	}
+}
+
+func TestConfigSet_BranchZellijLayout_Invalid(t *testing.T) {
+	dir := t.TempDir()
+	_, _, err := runConfigCmd(t, dir, []string{"--global", "set", "branch-zellij-layout", "invalid"})
+	if err == nil {
+		t.Fatal("expected error for invalid branch-zellij-layout")
 	}
 }
 

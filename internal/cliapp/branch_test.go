@@ -339,7 +339,7 @@ func TestBrNew_PassesModelToExec(t *testing.T) {
 }
 
 func TestZellijBranchLayoutIncludesCopilotAndSplit(t *testing.T) {
-	layout := zellijBranchLayout([]string{"copilot", "--model", "z-model"})
+	layout := zellijBranchLayout([]string{"copilot", "--model", "z-model"}, "vertical")
 	if !strings.Contains(layout, `plugin location="tab-bar"`) {
 		t.Fatalf("layout = %q, want tab-bar plugin", layout)
 	}
@@ -354,6 +354,63 @@ func TestZellijBranchLayoutIncludesCopilotAndSplit(t *testing.T) {
 	}
 	if !strings.Contains(layout, `args "--model" "z-model"`) {
 		t.Fatalf("layout = %q, want model args", layout)
+	}
+}
+
+func TestLaunchBranchInteractive_Zellij_UsesConfiguredLayout(t *testing.T) {
+	originalExec := runExec
+	originalLook := lookPath
+	originalRunCmd := runCommand
+	originalZellijEnv := os.Getenv("ZELLIJ")
+	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
+	t.Cleanup(func() {
+		runExec = originalExec
+		lookPath = originalLook
+		runCommand = originalRunCmd
+		_ = os.Setenv("ZELLIJ", originalZellijEnv)
+		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
+	})
+
+	lookPath = func(bin string) (string, error) {
+		switch bin {
+		case "zellij":
+			return "/usr/bin/zellij", nil
+		case "copilot":
+			return "/usr/bin/copilot", nil
+		default:
+			return "", fmt.Errorf("unknown binary %s", bin)
+		}
+	}
+
+	runExec = func(binary string, args []string, env []string) error { return nil }
+
+	var layoutContent string
+	runCommand = func(binary string, args []string, dir string) error {
+		for i := 0; i < len(args)-1; i++ {
+			if args[i] == "--layout" {
+				data, err := os.ReadFile(args[i+1])
+				if err != nil {
+					return err
+				}
+				layoutContent = string(data)
+				break
+			}
+		}
+		return nil
+	}
+
+	_ = os.Setenv("ZELLIJ", "0")
+	_ = os.Setenv("ZELLIJ_SESSION_NAME", "dev-session")
+
+	var out bytes.Buffer
+	wtPath := t.TempDir()
+	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij", BranchZellijLayout: "horizontal"}
+	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg); err != nil {
+		t.Fatalf("launchBranchInteractive: %v", err)
+	}
+
+	if !strings.Contains(layoutContent, `split_direction="horizontal"`) {
+		t.Fatalf("layout = %q, want horizontal split", layoutContent)
 	}
 }
 

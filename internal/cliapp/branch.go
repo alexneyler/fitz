@@ -160,7 +160,7 @@ func launchBranchInteractive(w io.Writer, path, name string, cfg config.Config) 
 	}
 
 	switch mode {
-	case "legacy":
+	case "standard":
 		copilotPath, err := lookPath("copilot")
 		if err != nil {
 			return errors.New("copilot not found in PATH")
@@ -172,7 +172,7 @@ func launchBranchInteractive(w io.Writer, path, name string, cfg config.Config) 
 	case "zellij":
 		return openBranchInZellij(w, path, name, cfg)
 	default:
-		return fmt.Errorf("invalid branch-open-mode: %s (valid values: zellij, legacy)", mode)
+		return fmt.Errorf("invalid branch-open-mode: %s (valid values: zellij, standard)", mode)
 	}
 }
 
@@ -187,10 +187,15 @@ func openBranchInZellij(w io.Writer, path, name string, cfg config.Config) error
 	inZellij := strings.TrimSpace(os.Getenv("ZELLIJ")) != ""
 	sessionName := strings.TrimSpace(os.Getenv("ZELLIJ_SESSION_NAME"))
 	if !inZellij && sessionName == "" {
-		return errors.New("zellij mode requires an active zellij session; run from inside zellij or set branch-open-mode=legacy")
+		return errors.New("zellij mode requires an active zellij session; run from inside zellij or set branch-open-mode=standard")
 	}
 
-	layoutPath, err := writeZellijBranchLayout(copilotBaseArgs(cfg))
+	splitDirection, err := zellijSplitDirection(cfg)
+	if err != nil {
+		return err
+	}
+
+	layoutPath, err := writeZellijBranchLayout(copilotBaseArgs(cfg), splitDirection)
 	if err != nil {
 		return fmt.Errorf("create zellij layout: %w", err)
 	}
@@ -210,13 +215,24 @@ func openBranchInZellij(w io.Writer, path, name string, cfg config.Config) error
 	return nil
 }
 
-func writeZellijBranchLayout(copilotArgs []string) (string, error) {
+func zellijSplitDirection(cfg config.Config) (string, error) {
+	layout := strings.TrimSpace(cfg.BranchZellijLayout)
+	if layout == "" {
+		layout = "vertical"
+	}
+	if layout != "vertical" && layout != "horizontal" {
+		return "", fmt.Errorf("invalid branch-zellij-layout: %s (valid values: vertical, horizontal)", layout)
+	}
+	return layout, nil
+}
+
+func writeZellijBranchLayout(copilotArgs []string, splitDirection string) (string, error) {
 	file, err := os.CreateTemp("", "fitz-zellij-*.kdl")
 	if err != nil {
 		return "", err
 	}
 	layoutPath := file.Name()
-	if _, err := file.WriteString(zellijBranchLayout(copilotArgs)); err != nil {
+	if _, err := file.WriteString(zellijBranchLayout(copilotArgs, splitDirection)); err != nil {
 		file.Close()
 		_ = os.Remove(layoutPath)
 		return "", err
@@ -228,36 +244,34 @@ func writeZellijBranchLayout(copilotArgs []string) (string, error) {
 	return layoutPath, nil
 }
 
-func zellijBranchLayout(copilotArgs []string) string {
+func zellijBranchLayout(copilotArgs []string, splitDirection string) string {
 	if len(copilotArgs) == 0 {
 		copilotArgs = []string{"copilot"}
 	}
 
-	var b strings.Builder
-	b.WriteString("layout {\n")
-	b.WriteString("    pane size=1 borderless=true {\n")
-	b.WriteString("        plugin location=\"tab-bar\"\n")
-	b.WriteString("    }\n")
-	b.WriteString("    pane split_direction=\"vertical\" {\n")
-	b.WriteString("        pane command=")
-	b.WriteString(strconv.Quote(copilotArgs[0]))
-	b.WriteString(" {\n")
+	argsLine := ""
 	if len(copilotArgs) > 1 {
-		b.WriteString("            args")
+		quotedArgs := make([]string, 0, len(copilotArgs)-1)
 		for _, arg := range copilotArgs[1:] {
-			b.WriteString(" ")
-			b.WriteString(strconv.Quote(arg))
+			quotedArgs = append(quotedArgs, strconv.Quote(arg))
 		}
-		b.WriteString("\n")
+		argsLine = fmt.Sprintf("            args %s\n", strings.Join(quotedArgs, " "))
 	}
-	b.WriteString("        }\n")
-	b.WriteString("        pane\n")
-	b.WriteString("    }\n")
-	b.WriteString("    pane size=1 borderless=true {\n")
-	b.WriteString("        plugin location=\"status-bar\"\n")
-	b.WriteString("    }\n")
-	b.WriteString("}\n")
-	return b.String()
+
+	return fmt.Sprintf(`layout {
+    pane size=1 borderless=true {
+        plugin location="tab-bar"
+    }
+    pane split_direction=%s {
+        pane command=%s {
+%s        }
+        pane
+    }
+    pane size=1 borderless=true {
+        plugin location="status-bar"
+    }
+}
+`, strconv.Quote(splitDirection), strconv.Quote(copilotArgs[0]), argsLine)
 }
 
 func BrGo(ctx context.Context, w io.Writer, name string) error {

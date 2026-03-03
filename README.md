@@ -31,8 +31,8 @@ The installer installs agent skills to improve the experience with fitz.
   - `fitz config unset <key>` — remove a config key (repo-level).
   - `fitz config list` — list all config keys and their values (repo-level).
   - Add `--global` to any subcommand to target global config (`~/.fitz/config.json`) instead.
-  - Valid keys: `model` (passed as `--model` to Copilot CLI), `agent` (agent framework; default: `copilot-cli`), `branch-open-mode` (`zellij` or `legacy`, default: `zellij`).
-  - Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`, `branch-open-mode=zellij`. Repo config overrides global, which overrides defaults.
+  - Valid keys: `model` (passed as `--model` to Copilot CLI), `agent` (agent framework; default: `copilot-cli`), `branch-open-mode` (`zellij` or `standard`, default: `zellij`), `branch-zellij-layout` (`vertical` or `horizontal`, default: `vertical`; used when `branch-open-mode=zellij`).
+  - Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`, `branch-open-mode=zellij`, `branch-zellij-layout=vertical`. Repo config overrides global, which overrides defaults.
   - `fitz config help` — show config usage and available subcommands.
 - `fitz help` — print usage.
 - `fitz review [focus...]` — review the current branch. On the default branch, creates a worktree for the review. On a feature branch, reviews the diff against the default branch. Shows live progress and prints a consolidated actionable list.
