@@ -3,7 +3,6 @@ package cliapp
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -116,25 +115,50 @@ func TestAssetName(t *testing.T) {
 	}
 }
 
-func TestLatestReleaseAssetNoMatch(t *testing.T) {
+func TestLatestStableReleaseNoMatch(t *testing.T) {
 	prev := httpClient
 	httpClient = &http.Client{
 		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(strings.NewReader(`{"assets":[{"name":"fitz_linux_amd64","browser_download_url":"https://example.invalid"}]}`)),
+				Body:       io.NopCloser(strings.NewReader(`{"tag_name":"v0.7.0","assets":[{"name":"fitz_linux_amd64","browser_download_url":"https://example.invalid"}]}`)),
 				Header:     make(http.Header),
 			}, nil
 		}),
 	}
 	t.Cleanup(func() { httpClient = prev })
 
-	_, err := latestReleaseAsset(context.Background(), "fitz_darwin_arm64")
-	if err == nil {
-		t.Fatal("expected error")
+	release, err := latestStableRelease(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !errors.Is(err, errNoAsset) {
-		t.Fatalf("error = %v", err)
+	if release.TagName != "v0.7.0" {
+		t.Fatalf("tag = %q", release.TagName)
+	}
+	if _, ok := selectAsset(release.Assets, "fitz_darwin_arm64"); ok {
+		t.Fatal("expected no match for darwin asset")
+	}
+}
+
+func TestLatestReleasePreview(t *testing.T) {
+	prev := httpClient
+	httpClient = &http.Client{
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`[{"tag_name":"v0.7.1-preview.3","assets":[{"name":"fitz_darwin_arm64","browser_download_url":"https://example.invalid/preview"}]}]`)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+	t.Cleanup(func() { httpClient = prev })
+
+	release, err := latestRelease(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if release.TagName != "v0.7.1-preview.3" {
+		t.Fatalf("tag = %q", release.TagName)
 	}
 }
 

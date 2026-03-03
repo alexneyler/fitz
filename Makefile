@@ -39,11 +39,11 @@ clean:
 
 
 fmt:
-	@files=$$(git ls-files '*.go'); \
+	@files=$$(git ls-files '*.go' && git ls-files --others --exclude-standard '*.go'); \
 	if [ -n "$$files" ]; then gofmt -w $$files; fi
 
 fmt-check:
-	@files=$$(git ls-files '*.go'); \
+	@files=$$(git ls-files '*.go' && git ls-files --others --exclude-standard '*.go'); \
 	if [ -z "$$files" ]; then exit 0; fi; \
 	unformatted=$$(gofmt -l $$files); \
 	if [ -n "$$unformatted" ]; then \

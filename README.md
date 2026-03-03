@@ -41,7 +41,7 @@ The installer installs agent skills to improve the experience with fitz.
   - `fitz todo <text>` — add a new todo item.
   - `fitz todo list` — interactive TUI (enter: create worktree, d: mark done, add new inline).
   - `fitz todo help` — show todo usage and available subcommands.
-- `fitz update` — replace the current executable with the latest release asset for your OS/arch.
+- `fitz update [--preview]` — replace the current executable with the latest release asset for your OS/arch. With `--preview`, include preview (pre-release) versions. Never downgrades: if the current version is newer than the target, no update is performed.
 - `fitz version` — print current version.
 
 ### Agent commands (humans can run these too)
@@ -64,7 +64,7 @@ Manual setup (if needed):
 
 ## Update + release artifact naming
 
-`fitz update` calls the latest GitHub release API and only accepts an exact asset name format: `fitz_<goos>_<goarch>` (or `fitz_<goos>_<goarch>.exe` on Windows).
+`fitz update` calls the latest GitHub release API and only accepts an exact asset name format: `fitz_<goos>_<goarch>` (or `fitz_<goos>_<goarch>.exe` on Windows). With `--preview`, it fetches the most recent release including pre-releases.
 
 ## Local development
 
@@ -91,4 +91,6 @@ make release-local VERSION=v0.1.0
 
 PR checks run `make lint` and `make test` on every pull request to `main`.
 
-Pushing a tag like `v1.0.0` triggers a release workflow that cross-compiles all platform binaries and creates a GitHub Release with auto-generated notes.
+Pushing to `main` triggers a preview release workflow that computes a version like `v0.7.1-preview.N` (where N is the commit count since the last stable tag), builds cross-platform binaries, and creates a GitHub pre-release. The preview is skipped when no new commits exist since the last stable tag.
+
+Pushing a tag like `v1.0.0` triggers a stable release workflow that cross-compiles all platform binaries and creates a GitHub Release with auto-generated notes. Pre-release tags (containing `-`) are ignored by this workflow.

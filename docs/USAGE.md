@@ -12,6 +12,8 @@
   - Example: `fitz version`
 - `fitz update` — downloads the latest release asset for your OS/arch and replaces the current executable.
   - Example: `fitz update`
+- `fitz update --preview` — same as `fitz update`, but includes preview (pre-release) versions. Never downgrades: if the installed version is already newer, no update is performed.
+  - Example: `fitz update --preview`
 - `fitz completion bash` — prints bash completion script.
   - Example: `fitz completion bash`
 - `fitz completion zsh` — prints zsh completion script.

@@ -33,8 +33,10 @@ var subcommands = map[string]Subcommand{
 }
 
 type commandLine struct {
-	Version    struct{} `cmd:"" help:"Print version information."`
-	Update     struct{} `cmd:"" help:"Update fitz to the latest release."`
+	Version struct{} `cmd:"" help:"Print version information."`
+	Update  struct {
+		Preview bool `help:"Include preview releases."`
+	} `cmd:"" help:"Update fitz to the latest release."`
 	Completion struct {
 		Shell string `arg:"" optional:"" help:"Target shell (bash or zsh)."`
 	} `cmd:"" help:"Print shell completion script."`
@@ -82,7 +84,7 @@ func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	case "version":
 		err = cliapp.Version(context.Background(), stdout, currentVersion())
 	case "update":
-		err = runUpdate(context.Background(), stdout)
+		err = runUpdate(context.Background(), stdout, currentVersion(), cli.Update.Preview)
 	case "completion":
 		completionArgs := []string{}
 		if shell := strings.TrimSpace(cli.Completion.Shell); shell != "" {
