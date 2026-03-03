@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -334,5 +335,196 @@ func TestBrNew_PassesModelToExec(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("--model exec-model not found in exec args: %v", capturedArgs)
+	}
+}
+
+func TestZellijBranchLayoutIncludesCopilotAndSplit(t *testing.T) {
+	layout := zellijBranchLayout([]string{"copilot", "--model", "z-model"}, "vertical")
+	if !strings.Contains(layout, `plugin location="tab-bar"`) {
+		t.Fatalf("layout = %q, want tab-bar plugin", layout)
+	}
+	if !strings.Contains(layout, `plugin location="status-bar"`) {
+		t.Fatalf("layout = %q, want status-bar plugin", layout)
+	}
+	if !strings.Contains(layout, `split_direction="vertical"`) {
+		t.Fatalf("layout = %q, want vertical split", layout)
+	}
+	if !strings.Contains(layout, `command="copilot"`) {
+		t.Fatalf("layout = %q, want copilot command", layout)
+	}
+	if !strings.Contains(layout, `args "--model" "z-model"`) {
+		t.Fatalf("layout = %q, want model args", layout)
+	}
+}
+
+func TestLaunchBranchInteractive_Zellij_UsesConfiguredLayout(t *testing.T) {
+	originalExec := runExec
+	originalLook := lookPath
+	originalRunCmd := runCommand
+	originalZellijEnv := os.Getenv("ZELLIJ")
+	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
+	t.Cleanup(func() {
+		runExec = originalExec
+		lookPath = originalLook
+		runCommand = originalRunCmd
+		_ = os.Setenv("ZELLIJ", originalZellijEnv)
+		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
+	})
+
+	lookPath = func(bin string) (string, error) {
+		switch bin {
+		case "zellij":
+			return "/usr/bin/zellij", nil
+		case "copilot":
+			return "/usr/bin/copilot", nil
+		default:
+			return "", fmt.Errorf("unknown binary %s", bin)
+		}
+	}
+
+	runExec = func(binary string, args []string, env []string) error { return nil }
+
+	var layoutContent string
+	runCommand = func(binary string, args []string, dir string) error {
+		for i := 0; i < len(args)-1; i++ {
+			if args[i] == "--layout" {
+				data, err := os.ReadFile(args[i+1])
+				if err != nil {
+					return err
+				}
+				layoutContent = string(data)
+				break
+			}
+		}
+		return nil
+	}
+
+	_ = os.Setenv("ZELLIJ", "0")
+	_ = os.Setenv("ZELLIJ_SESSION_NAME", "dev-session")
+
+	var out bytes.Buffer
+	wtPath := t.TempDir()
+	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij", BranchZellijLayout: "horizontal"}
+	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg); err != nil {
+		t.Fatalf("launchBranchInteractive: %v", err)
+	}
+
+	if !strings.Contains(layoutContent, `split_direction="horizontal"`) {
+		t.Fatalf("layout = %q, want horizontal split", layoutContent)
+	}
+}
+
+func TestLaunchBranchInteractive_Zellij(t *testing.T) {
+	originalExec := runExec
+	originalLook := lookPath
+	originalRunCmd := runCommand
+	originalZellijEnv := os.Getenv("ZELLIJ")
+	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
+	t.Cleanup(func() {
+		runExec = originalExec
+		lookPath = originalLook
+		runCommand = originalRunCmd
+		_ = os.Setenv("ZELLIJ", originalZellijEnv)
+		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
+	})
+
+	lookPath = func(bin string) (string, error) {
+		switch bin {
+		case "zellij":
+			return "/usr/bin/zellij", nil
+		case "copilot":
+			return "/usr/bin/copilot", nil
+		default:
+			return "", fmt.Errorf("unknown binary %s", bin)
+		}
+	}
+
+	var execCalled bool
+	runExec = func(binary string, args []string, env []string) error {
+		execCalled = true
+		return nil
+	}
+
+	var calledBinary string
+	var calledArgs []string
+	var calledDir string
+	runCommand = func(binary string, args []string, dir string) error {
+		calledBinary = binary
+		calledArgs = append([]string{}, args...)
+		calledDir = dir
+		return nil
+	}
+
+	_ = os.Setenv("ZELLIJ", "0")
+	_ = os.Setenv("ZELLIJ_SESSION_NAME", "dev-session")
+
+	var out bytes.Buffer
+	wtPath := t.TempDir()
+	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij"}
+	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg); err != nil {
+		t.Fatalf("launchBranchInteractive: %v", err)
+	}
+
+	if execCalled {
+		t.Fatal("runExec should not be called in zellij mode")
+	}
+	if calledBinary != "/usr/bin/zellij" {
+		t.Fatalf("binary = %q, want /usr/bin/zellij", calledBinary)
+	}
+	if len(calledArgs) < 4 || calledArgs[0] != "--session" || calledArgs[1] != "dev-session" || calledArgs[2] != "action" || calledArgs[3] != "new-tab" {
+		t.Fatalf("args = %v, want zellij --session dev-session action new-tab ...", calledArgs)
+	}
+	if calledDir != wtPath {
+		t.Fatalf("dir = %q, want %q", calledDir, wtPath)
+	}
+
+	var layoutPath string
+	for i := 0; i < len(calledArgs)-1; i++ {
+		if calledArgs[i] == "--layout" {
+			layoutPath = calledArgs[i+1]
+		}
+	}
+	if layoutPath == "" {
+		t.Fatalf("args = %v, want --layout <path>", calledArgs)
+	}
+	if !filepath.IsAbs(layoutPath) {
+		t.Fatalf("layout path = %q, want absolute path", layoutPath)
+	}
+	if strings.TrimSpace(out.String()) == "" {
+		t.Fatal("expected user-facing output")
+	}
+}
+
+func TestLaunchBranchInteractive_ZellijRequiresSessionContext(t *testing.T) {
+	originalLook := lookPath
+	originalZellijEnv := os.Getenv("ZELLIJ")
+	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
+	t.Cleanup(func() {
+		lookPath = originalLook
+		_ = os.Setenv("ZELLIJ", originalZellijEnv)
+		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
+	})
+
+	lookPath = func(bin string) (string, error) {
+		switch bin {
+		case "zellij", "copilot":
+			return "/usr/bin/" + bin, nil
+		default:
+			return "", fmt.Errorf("unknown binary %s", bin)
+		}
+	}
+
+	_ = os.Unsetenv("ZELLIJ")
+	_ = os.Unsetenv("ZELLIJ_SESSION_NAME")
+
+	var out bytes.Buffer
+	wtPath := t.TempDir()
+	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij"}
+	err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg)
+	if err == nil {
+		t.Fatal("expected error when not in zellij and no session name is available")
+	}
+	if !strings.Contains(err.Error(), "active zellij session") {
+		t.Fatalf("error = %q, want mention of active zellij session", err.Error())
 	}
 }

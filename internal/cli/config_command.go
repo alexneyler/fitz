@@ -29,7 +29,7 @@ func (configCommand) Help(w io.Writer) {
 	fmt.Fprintln(w, "  --global    Operate on global config (~/.fitz/config.json)")
 	fmt.Fprintln(w, "              Default: repo-level config (~/.fitz/<owner>/<repo>/config.json)")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Valid keys: model, agent")
+	fmt.Fprintln(w, "Valid keys: model, agent, branch-open-mode, branch-zellij-layout")
 }
 
 func (c configCommand) Run(_ context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
@@ -118,7 +118,7 @@ func (c configCommand) runGet(w io.Writer, configPath string, args []string) err
 
 	value, ok := config.Get(cfg, key)
 	if !ok {
-		return fmt.Errorf("unknown config key: %s (valid keys: model, agent)", key)
+		return fmt.Errorf("unknown config key: %s (valid keys: model, agent, branch-open-mode, branch-zellij-layout)", key)
 	}
 	if value == "" {
 		fmt.Fprintf(w, "(not set)\n")

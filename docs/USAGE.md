@@ -16,7 +16,7 @@
   - Example: `fitz completion bash`
 - `fitz completion zsh` — prints zsh completion script.
   - Example: `fitz completion zsh`
-- `fitz config [--global] <command>` — get and set configuration values. Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`. Repo config overrides global, which overrides built-in defaults.
+- `fitz config [--global] <command>` — get and set configuration values. Config is stored at `~/.fitz/<owner>/<repo>/config.json` (repo-level) or `~/.fitz/config.json` (global). Defaults: `model=gpt-5.3-codex`, `agent=copilot-cli`, `branch-open-mode=zellij`, `branch-zellij-layout=vertical`. Repo config overrides global, which overrides built-in defaults.
   - `fitz config get <key>` — print the value of a config key for the current repo.
     - Example: `fitz config get model`
     - Example: `fitz config --global get model`
@@ -31,10 +31,10 @@
     - Example: `fitz config --global list`
   - `fitz config help` — show config usage and available subcommands.
     - Example: `fitz config help`
-  - Valid keys: `model` (passed as `--model` to Copilot CLI on every invocation), `agent` (agent framework; only `copilot-cli` supported today).
+  - Valid keys: `model` (passed as `--model` to Copilot CLI on every invocation), `agent` (agent framework; only `copilot-cli` supported today), `branch-open-mode` (`zellij` or `standard`), `branch-zellij-layout` (`vertical` or `horizontal`, used when `branch-open-mode=zellij`).
 - `fitz br` — interactive worktree list. Navigate with ↑/↓, press enter to switch worktrees, d to delete (with confirmation), n to create a new worktree, p to publish (push + create PR), or q to quit. The root worktree is shown dimmed and non-actionable.
   - Example: `fitz br`
-- `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. If a prompt is given (one or more words), copilot launches in the background with `--yolo -p "<prompt>"`.
+- `fitz br new [--base <branch>] <name> [prompt...]` — create a new worktree. Optionally set a base branch with `--base`. Without a prompt, this opens a new zellij tab in the active zellij session (default) with Copilot in the left pane and a shell in the right pane, both in the new worktree directory. If a prompt is given, Copilot launches in the background with `--yolo -p "<prompt>"`.
   - Example: `fitz br new feature-login`
   - Example: `fitz br new --base develop feature-login`
   - Example: `fitz br new feature-login implement user authentication`
