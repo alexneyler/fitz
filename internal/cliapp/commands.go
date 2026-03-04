@@ -47,7 +47,7 @@ func Update(ctx context.Context, w io.Writer, currentVersion string, preview boo
 		return fmt.Errorf("%w: expected asset %q", errNoAsset, targetAsset)
 	}
 
-	exePath, err := os.Executable()
+	exePath, err := executablePath()
 	if err != nil {
 		return fmt.Errorf("%w: resolve executable path: %v", errReplaceBinary, err)
 	}
@@ -69,6 +69,7 @@ const (
 
 var (
 	httpClient       = &http.Client{Timeout: 20 * time.Second}
+	executablePath   = os.Executable
 	errReleaseFetch  = errors.New("network/API failure")
 	errNoAsset       = errors.New("no matching release asset")
 	errReplaceBinary = errors.New("permission/replace failure")

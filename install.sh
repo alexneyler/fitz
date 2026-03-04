@@ -69,5 +69,6 @@ curl -fsSL "$review_skill_url" -o "$review_skill_dir/SKILL.md"
 ln -snf "$review_skill_dir" "$copilot_skill_root/review"
 
 echo ""
-echo "fitz installed successfully!"
+installed_version=$("$bin_path" version 2>/dev/null) || installed_version="fitz"
+echo "$installed_version installed successfully!"
 echo "Run 'source $rc_file' to update your current shell, or open a new terminal."
