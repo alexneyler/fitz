@@ -3,8 +3,11 @@ package cliapp
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -166,4 +169,78 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+func TestUpdateOutputsVersion(t *testing.T) {
+	prevHTTP := httpClient
+	prevExe := executablePath
+	t.Cleanup(func() {
+		httpClient = prevHTTP
+		executablePath = prevExe
+	})
+
+	tmp, err := os.CreateTemp(t.TempDir(), "fitz-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmp.Close()
+	executablePath = func() (string, error) { return tmp.Name(), nil }
+
+	releaseJSON := `{"tag_name":"v1.2.3","assets":[{"name":"%s","browser_download_url":"https://example.invalid/download"}]}`
+	releaseJSON = fmt.Sprintf(releaseJSON, assetName(runtime.GOOS, runtime.GOARCH))
+	callCount := 0
+	httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			callCount++
+			if strings.Contains(req.URL.Path, "/releases/latest") {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(releaseJSON)),
+					Header:     make(http.Header),
+				}, nil
+			}
+			// download request
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("fake-binary")),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	var out bytes.Buffer
+	err = Update(context.Background(), &out, "v1.0.0", false)
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if !strings.Contains(out.String(), "v1.2.3") {
+		t.Fatalf("stdout = %q, want version v1.2.3", out.String())
+	}
+}
+
+func TestUpdateAlreadyUpToDate(t *testing.T) {
+	prevHTTP := httpClient
+	t.Cleanup(func() { httpClient = prevHTTP })
+
+	httpClient = &http.Client{
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"tag_name":"v1.0.0","assets":[]}`)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	var out bytes.Buffer
+	err := Update(context.Background(), &out, "v1.0.0", false)
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if !strings.Contains(out.String(), "already up to date") {
+		t.Fatalf("stdout = %q, want 'already up to date'", out.String())
+	}
+	if !strings.Contains(out.String(), "v1.0.0") {
+		t.Fatalf("stdout = %q, want version v1.0.0", out.String())
+	}
 }
