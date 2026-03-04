@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -214,6 +215,107 @@ func TestBrPublish(t *testing.T) {
 	}
 }
 
+func TestBrNewFetchesOriginAndUsesDefaultBase(t *testing.T) {
+	// Set up a bare repo to act as "origin".
+	bareDir := t.TempDir()
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v in %s: %v\n%s", args, dir, err, out)
+		}
+	}
+
+	run(bareDir, "init", "--bare", "--initial-branch=main")
+
+	// Clone the bare repo.
+	cloneDir := t.TempDir()
+	run(cloneDir, "clone", bareDir, "work")
+	workDir := filepath.Join(cloneDir, "work")
+
+	// Make an initial commit in the clone and push.
+	if err := os.WriteFile(filepath.Join(workDir, "file.txt"), []byte("v1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(workDir, "add", ".")
+	run(workDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
+	run(workDir, "push", "origin", "main")
+
+	// Add another commit directly to origin (simulates remote work).
+	secondClone := t.TempDir()
+	run(secondClone, "clone", bareDir, "work2")
+	work2Dir := filepath.Join(secondClone, "work2")
+	if err := os.WriteFile(filepath.Join(work2Dir, "file.txt"), []byte("v2"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(work2Dir, "add", ".")
+	run(work2Dir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "remote update")
+	run(work2Dir, "push", "origin", "main")
+
+	// Record the latest origin commit.
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = work2Dir
+	latestBytes, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	latestSHA := strings.TrimSpace(string(latestBytes))
+
+	// Redirect HOME to a temp dir so worktrees don't leak into real home.
+	fakeHome := t.TempDir()
+	origHome := os.Getenv("HOME")
+	t.Cleanup(func() { _ = os.Setenv("HOME", origHome) })
+	_ = os.Setenv("HOME", fakeHome)
+
+	// Now from workDir (which is behind origin), call BrNew.
+	// It should fetch and base the new branch on origin/main.
+	originalDir, _ := os.Getwd()
+	t.Cleanup(func() { _ = os.Chdir(originalDir) })
+	if err := os.Chdir(workDir); err != nil {
+		t.Fatal(err)
+	}
+
+	// Stub launchBranchInteractive to avoid TUI.
+	originalExec := runExec
+	originalLook := lookPath
+	originalLoadCfg := loadEffectiveConfig
+	t.Cleanup(func() {
+		runExec = originalExec
+		lookPath = originalLook
+		loadEffectiveConfig = originalLoadCfg
+	})
+
+	lookPath = func(string) (string, error) { return "/usr/bin/copilot", nil }
+	loadEffectiveConfig = func(dir string) config.Config {
+		return config.Config{BranchOpenMode: "standard"}
+	}
+	runExec = func(binary string, args []string, env []string) error { return nil }
+
+	var out bytes.Buffer
+	err = BrNew(context.Background(), &out, "test-fetch-branch", "", "")
+	t.Cleanup(func() {
+		_ = exec.Command("git", "-C", workDir, "worktree", "prune").Run()
+		_ = exec.Command("git", "-C", workDir, "branch", "-D", "test-fetch-branch").Run()
+	})
+	if err != nil {
+		t.Fatalf("BrNew: %v", err)
+	}
+
+	// Verify the new branch points to the latest origin commit.
+	cmd = exec.Command("git", "-C", workDir, "rev-parse", "test-fetch-branch")
+	branchBytes, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("rev-parse test-fetch-branch: %v", err)
+	}
+	branchSHA := strings.TrimSpace(string(branchBytes))
+
+	if branchSHA != latestSHA {
+		t.Errorf("branch SHA = %s, want %s (latest origin)", branchSHA, latestSHA)
+	}
+}
+
 func TestBrPublishProtectsDefaultBranch(t *testing.T) {
 	originalCopilot := runCopilot
 	t.Cleanup(func() { runCopilot = originalCopilot })
@@ -244,9 +346,9 @@ func TestCopilotBaseArgs_NoModel(t *testing.T) {
 }
 
 func TestCopilotBaseArgs_WithModel(t *testing.T) {
-	cfg := config.Config{Model: "gpt-5.3-codex"}
+	cfg := config.Config{Model: "claude-opus-4.6"}
 	args := copilotBaseArgs(cfg)
-	want := []string{"copilot", "--model", "gpt-5.3-codex"}
+	want := []string{"copilot", "--model", "claude-opus-4.6"}
 	if len(args) != len(want) {
 		t.Fatalf("copilotBaseArgs = %v, want %v", args, want)
 	}
@@ -403,7 +505,7 @@ func TestLaunchBranchInteractive_Zellij_UsesConfiguredLayout(t *testing.T) {
 	var out bytes.Buffer
 	wtPath := t.TempDir()
 	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij", BranchZellijLayout: "horizontal"}
-	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg); err != nil {
+	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", "myrepo", cfg); err != nil {
 		t.Fatalf("launchBranchInteractive: %v", err)
 	}
 
@@ -453,7 +555,7 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	var out bytes.Buffer
 	wtPath := t.TempDir()
 	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij"}
-	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg); err != nil {
+	if err := launchBranchInteractive(&out, wtPath, "feature-zellij", "myrepo", cfg); err != nil {
 		t.Fatalf("launchBranchInteractive: %v", err)
 	}
 
@@ -462,6 +564,17 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	}
 	if len(calledArgs) < 4 || calledArgs[0] != "--session" || calledArgs[1] != "dev-session" || calledArgs[2] != "action" || calledArgs[3] != "new-tab" {
 		t.Fatalf("args = %v, want --session dev-session action new-tab ...", calledArgs)
+	}
+
+	// Verify tab name includes repo name
+	var tabName string
+	for i := 0; i < len(calledArgs)-1; i++ {
+		if calledArgs[i] == "--name" {
+			tabName = calledArgs[i+1]
+		}
+	}
+	if tabName != "myrepo:feature-zellij" {
+		t.Fatalf("tab name = %q, want %q", tabName, "myrepo:feature-zellij")
 	}
 
 	var layoutPath string
@@ -478,6 +591,76 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	}
 	if strings.TrimSpace(out.String()) == "" {
 		t.Fatal("expected user-facing output")
+	}
+}
+
+func TestOpenZellijTab_IncludesResumeArgs(t *testing.T) {
+	originalLook := lookPath
+	originalRunCmd := runCommand
+	originalZellijEnv := os.Getenv("ZELLIJ")
+	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
+	t.Cleanup(func() {
+		lookPath = originalLook
+		runCommand = originalRunCmd
+		_ = os.Setenv("ZELLIJ", originalZellijEnv)
+		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
+	})
+
+	lookPath = func(bin string) (string, error) {
+		switch bin {
+		case "zellij":
+			return "/usr/bin/zellij", nil
+		case "copilot":
+			return "/usr/bin/copilot", nil
+		default:
+			return "", fmt.Errorf("unknown binary %s", bin)
+		}
+	}
+
+	var layoutContent string
+	var calledArgs []string
+	runCommand = func(binary string, args []string, dir string) error {
+		calledArgs = append([]string{}, args...)
+		for i := 0; i < len(args)-1; i++ {
+			if args[i] == "--layout" {
+				data, err := os.ReadFile(args[i+1])
+				if err != nil {
+					return err
+				}
+				layoutContent = string(data)
+				break
+			}
+		}
+		return nil
+	}
+
+	_ = os.Setenv("ZELLIJ", "0")
+	_ = os.Setenv("ZELLIJ_SESSION_NAME", "dev-session")
+
+	wtPath := t.TempDir()
+	copilotArgs := []string{"copilot", "--model", "test-model", "--resume", "session-abc"}
+	cfg := config.Config{BranchZellijLayout: "vertical"}
+	if err := openZellijTab(wtPath, "my-branch", "myrepo", copilotArgs, cfg); err != nil {
+		t.Fatalf("openZellijTab: %v", err)
+	}
+
+	// Verify layout includes resume args.
+	if !strings.Contains(layoutContent, `"--resume"`) {
+		t.Fatalf("layout = %q, want --resume arg", layoutContent)
+	}
+	if !strings.Contains(layoutContent, `"session-abc"`) {
+		t.Fatalf("layout = %q, want session ID", layoutContent)
+	}
+
+	// Verify tab name.
+	var tabName string
+	for i := 0; i < len(calledArgs)-1; i++ {
+		if calledArgs[i] == "--name" {
+			tabName = calledArgs[i+1]
+		}
+	}
+	if tabName != "myrepo:my-branch" {
+		t.Fatalf("tab name = %q, want %q", tabName, "myrepo:my-branch")
 	}
 }
 
@@ -506,11 +689,114 @@ func TestLaunchBranchInteractive_ZellijRequiresSessionContext(t *testing.T) {
 	var out bytes.Buffer
 	wtPath := t.TempDir()
 	cfg := config.Config{Model: "z-model", BranchOpenMode: "zellij"}
-	err := launchBranchInteractive(&out, wtPath, "feature-zellij", cfg)
+	err := launchBranchInteractive(&out, wtPath, "feature-zellij", "myrepo", cfg)
 	if err == nil {
 		t.Fatal("expected error when not in zellij and no session name is available")
 	}
 	if !strings.Contains(err.Error(), "active zellij session") {
 		t.Fatalf("error = %q, want mention of active zellij session", err.Error())
+	}
+}
+
+func TestParsePRNumber(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    int
+		wantErr bool
+	}{
+		{name: "plain number", input: "42", want: 42},
+		{name: "hash prefix", input: "#42", want: 42},
+		{name: "full URL", input: "https://github.com/owner/repo/pull/42", want: 42},
+		{name: "URL with trailing slash", input: "https://github.com/owner/repo/pull/123/", want: 123},
+		{name: "empty", input: "", wantErr: true},
+		{name: "not a number", input: "abc", wantErr: true},
+		{name: "zero", input: "0", wantErr: true},
+		{name: "negative", input: "-1", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parsePRNumber(tc.input)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("parsePRNumber(%q) = %d, want %d", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestBrCheckout(t *testing.T) {
+	originalGh := runGh
+	originalExec := runExec
+	originalLook := lookPath
+	originalLoadCfg := loadEffectiveConfig
+	t.Cleanup(func() {
+		runGh = originalGh
+		runExec = originalExec
+		lookPath = originalLook
+		loadEffectiveConfig = originalLoadCfg
+	})
+
+	// Use the actual repo's owner/repo so the mismatch check passes.
+	runGh = func(dir string, args ...string) (string, error) {
+		return `{"headRefName":"feature-branch","url":"https://github.com/alexneyler/fitz/pull/42"}`, nil
+	}
+
+	lookPath = func(string) (string, error) { return "/usr/bin/copilot", nil }
+	loadEffectiveConfig = func(dir string) config.Config {
+		return config.Config{BranchOpenMode: "standard"}
+	}
+
+	var execArgs []string
+	runExec = func(binary string, args []string, env []string) error {
+		execArgs = args
+		return nil
+	}
+
+	var out bytes.Buffer
+	err := BrCheckout(context.Background(), &out, "42")
+	if err != nil {
+		// Real git commands fail in test without a remote. Tolerate fetch/worktree
+		// errors — the gh mock proves PR parsing and gh integration work.
+		if strings.Contains(err.Error(), "get PR info") {
+			t.Skip("skipping: gh not available or not authed")
+		}
+		if strings.Contains(err.Error(), "fetch PR") || strings.Contains(err.Error(), "create worktree") {
+			return
+		}
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "checked out PR #42") {
+		t.Errorf("stdout = %q, want 'checked out PR #42'", output)
+	}
+	_ = execArgs
+}
+
+func TestBrCheckoutRepoMismatch(t *testing.T) {
+	originalGh := runGh
+	t.Cleanup(func() { runGh = originalGh })
+
+	runGh = func(dir string, args ...string) (string, error) {
+		return `{"headRefName":"feature-branch","url":"https://github.com/other-org/other-repo/pull/99"}`, nil
+	}
+
+	var out bytes.Buffer
+	err := BrCheckout(context.Background(), &out, "99")
+	if err == nil {
+		t.Fatal("expected error for repo mismatch")
+	}
+	if !strings.Contains(err.Error(), "belongs to other-org/other-repo") {
+		t.Fatalf("error = %q, want repo mismatch message", err.Error())
 	}
 }

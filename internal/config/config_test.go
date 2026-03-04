@@ -10,8 +10,8 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := config.DefaultConfig()
-	if cfg.Model != "gpt-5.3-codex" {
-		t.Errorf("default model = %q, want %q", cfg.Model, "gpt-5.3-codex")
+	if cfg.Model != "claude-opus-4.6" {
+		t.Errorf("default model = %q, want %q", cfg.Model, "claude-opus-4.6")
 	}
 	if cfg.Agent != "copilot-cli" {
 		t.Errorf("default agent = %q, want %q", cfg.Agent, "copilot-cli")

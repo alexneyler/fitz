@@ -12,6 +12,8 @@
   - Example: `fitz version`
 - `fitz update` — downloads the latest release asset for your OS/arch and replaces the current executable.
   - Example: `fitz update`
+- `fitz update --preview` — same as `fitz update`, but includes preview (pre-release) versions. Never downgrades: if the installed version is already newer, no update is performed.
+  - Example: `fitz update --preview`
 - `fitz completion bash` — prints bash completion script.
   - Example: `fitz completion bash`
 - `fitz completion zsh` — prints zsh completion script.
@@ -40,6 +42,10 @@
   - Example: `fitz br new feature-login implement user authentication`
   - Example: `fitz br new feature-login "implement user authentication"`
   - Example: `fitz br new --base main feature-login implement user authentication`
+- `fitz br co <pr-number-or-url>` — check out a pull request into a new worktree. Accepts a PR number, `#number`, or full GitHub PR URL. Fetches the PR's branch, creates a worktree, stores the PR link for `fitz br list`, and opens an interactive session.
+  - Example: `fitz br co 42`
+  - Example: `fitz br co #42`
+  - Example: `fitz br co https://github.com/owner/repo/pull/42`
 - `fitz br go <name>` — switch to an existing worktree.
   - Example: `fitz br go feature-login`
 - `fitz br rm <name> [--force]` — remove a worktree and its branch (optionally force removal).

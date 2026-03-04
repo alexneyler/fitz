@@ -75,5 +75,6 @@ notify_hook_url="https://raw.githubusercontent.com/alexneyler/fitz/main/hooks/no
 curl -fsSL "$notify_hook_url" -o "$hooks_dir/fitz-notify.json"
 
 echo ""
-echo "fitz installed successfully!"
+installed_version=$("$bin_path" version 2>/dev/null) || installed_version="fitz"
+echo "$installed_version installed successfully!"
 echo "Run 'source $rc_file' to update your current shell, or open a new terminal."

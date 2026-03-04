@@ -11,7 +11,7 @@ import (
 
 func TestExecuteKnownCommands(t *testing.T) {
 	prev := runUpdate
-	runUpdate = func(_ context.Context, w io.Writer) error {
+	runUpdate = func(_ context.Context, w io.Writer, _ string, _ bool) error {
 		_, err := fmt.Fprintln(w, "updated from fitz_test")
 		return err
 	}
@@ -101,6 +101,7 @@ func TestExecuteBrCommands(t *testing.T) {
 		{name: "br go missing name", args: []string{"br", "go"}, wantErr: true},
 		{name: "br rm missing name", args: []string{"br", "rm"}, wantErr: true},
 		{name: "br cd missing name", args: []string{"br", "cd"}, wantErr: true},
+		{name: "br co missing pr", args: []string{"br", "co"}, wantErr: true},
 		{name: "br unknown subcommand", args: []string{"br", "wat"}, wantErr: true},
 	}
 
@@ -270,6 +271,27 @@ func TestExecuteHelpListsAgent(t *testing.T) {
 	}
 }
 
+func TestExecuteUpdatePreviewFlag(t *testing.T) {
+	prev := runUpdate
+	t.Cleanup(func() { runUpdate = prev })
+
+	var gotPreview bool
+	runUpdate = func(_ context.Context, w io.Writer, _ string, preview bool) error {
+		gotPreview = preview
+		_, err := fmt.Fprintln(w, "updated")
+		return err
+	}
+
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"update", "--preview"}, strings.NewReader(""), &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !gotPreview {
+		t.Fatal("expected preview=true")
+	}
+}
+
 func TestExecuteHelpListsReview(t *testing.T) {
 	var out, errOut bytes.Buffer
 	stdin := strings.NewReader("")
@@ -412,5 +434,17 @@ func TestAgentHelpListsNotify(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "notify") {
 		t.Fatalf("stdout = %q, want 'notify' listed", out.String())
+	}
+}
+
+func TestBrHelpListsCo(t *testing.T) {
+	var out, errOut bytes.Buffer
+	stdin := strings.NewReader("")
+	err := Execute([]string{"br", "help"}, stdin, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "co") {
+		t.Fatalf("stdout = %q, want 'co' listed", out.String())
 	}
 }

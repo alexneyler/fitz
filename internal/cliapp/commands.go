@@ -19,17 +19,35 @@ func Version(_ context.Context, w io.Writer, version string) error {
 	return err
 }
 
-func Update(ctx context.Context, w io.Writer) error {
+func Update(ctx context.Context, w io.Writer, currentVersion string, preview bool) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	targetAsset := assetName(runtime.GOOS, runtime.GOARCH)
-	asset, err := latestReleaseAsset(ctx, targetAsset)
+	var release githubRelease
+	var err error
+	if preview {
+		release, err = latestRelease(ctx)
+	} else {
+		release, err = latestStableRelease(ctx)
+	}
 	if err != nil {
 		return err
 	}
 
-	exePath, err := os.Executable()
+	if currentVersion != "dev" && release.TagName != "" {
+		if compareVersions(currentVersion, release.TagName) >= 0 {
+			_, err = fmt.Fprintf(w, "already up to date (%s)\n", currentVersion)
+			return err
+		}
+	}
+
+	targetAsset := assetName(runtime.GOOS, runtime.GOARCH)
+	asset, ok := selectAsset(release.Assets, targetAsset)
+	if !ok {
+		return fmt.Errorf("%w: expected asset %q", errNoAsset, targetAsset)
+	}
+
+	exePath, err := executablePath()
 	if err != nil {
 		return fmt.Errorf("%w: resolve executable path: %v", errReplaceBinary, err)
 	}
@@ -38,25 +56,28 @@ func Update(ctx context.Context, w io.Writer) error {
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, "updated from %s\n", asset.Name)
+	_, err = fmt.Fprintf(w, "updated to %s\n", release.TagName)
 	return err
 }
 
 const (
 	githubLatestReleaseAPI = "https://api.github.com/repos/alexneyler/fitz/releases/latest"
+	githubReleasesAPI      = "https://api.github.com/repos/alexneyler/fitz/releases"
 	// Release assets must be named as: fitz_<goos>_<goarch> (or .exe suffix on windows).
 	releaseAssetPrefix = "fitz_"
 )
 
 var (
 	httpClient       = &http.Client{Timeout: 20 * time.Second}
+	executablePath   = os.Executable
 	errReleaseFetch  = errors.New("network/API failure")
 	errNoAsset       = errors.New("no matching release asset")
 	errReplaceBinary = errors.New("permission/replace failure")
 )
 
 type githubRelease struct {
-	Assets []githubAsset `json:"assets"`
+	TagName string        `json:"tag_name"`
+	Assets  []githubAsset `json:"assets"`
 }
 
 type githubAsset struct {
@@ -72,35 +93,60 @@ func assetName(goos, goarch string) string {
 	return name
 }
 
-func latestReleaseAsset(ctx context.Context, targetName string) (githubAsset, error) {
+func latestStableRelease(ctx context.Context) (githubRelease, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, githubLatestReleaseAPI, nil)
 	if err != nil {
-		return githubAsset{}, fmt.Errorf("%w: build request: %v", errReleaseFetch, err)
+		return githubRelease{}, fmt.Errorf("%w: build request: %v", errReleaseFetch, err)
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "fitz-updater")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return githubAsset{}, fmt.Errorf("%w: request latest release: %v", errReleaseFetch, err)
+		return githubRelease{}, fmt.Errorf("%w: request latest release: %v", errReleaseFetch, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return githubAsset{}, fmt.Errorf("%w: latest release status %d", errReleaseFetch, res.StatusCode)
+		return githubRelease{}, fmt.Errorf("%w: latest release status %d", errReleaseFetch, res.StatusCode)
 	}
 
 	var release githubRelease
 	if err := json.NewDecoder(res.Body).Decode(&release); err != nil {
-		return githubAsset{}, fmt.Errorf("%w: decode release payload: %v", errReleaseFetch, err)
+		return githubRelease{}, fmt.Errorf("%w: decode release payload: %v", errReleaseFetch, err)
 	}
 
-	asset, ok := selectAsset(release.Assets, targetName)
-	if !ok {
-		return githubAsset{}, fmt.Errorf("%w: expected asset %q", errNoAsset, targetName)
+	return release, nil
+}
+
+func latestRelease(ctx context.Context) (githubRelease, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, githubReleasesAPI+"?per_page=1", nil)
+	if err != nil {
+		return githubRelease{}, fmt.Errorf("%w: build request: %v", errReleaseFetch, err)
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "fitz-updater")
+
+	res, err := httpClient.Do(req)
+	if err != nil {
+		return githubRelease{}, fmt.Errorf("%w: request releases: %v", errReleaseFetch, err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return githubRelease{}, fmt.Errorf("%w: releases status %d", errReleaseFetch, res.StatusCode)
 	}
 
-	return asset, nil
+	var releases []githubRelease
+	if err := json.NewDecoder(res.Body).Decode(&releases); err != nil {
+		return githubRelease{}, fmt.Errorf("%w: decode releases payload: %v", errReleaseFetch, err)
+	}
+
+	if len(releases) == 0 {
+		return githubRelease{}, fmt.Errorf("%w: no releases found", errReleaseFetch)
+	}
+
+	return releases[0], nil
 }
 
 func selectAsset(assets []githubAsset, targetName string) (githubAsset, bool) {

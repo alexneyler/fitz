@@ -78,7 +78,7 @@ func TestReviewOnFeatureBranch(t *testing.T) {
 	reviewStatusInterval = 10 * time.Millisecond
 
 	loadEffectiveConfig = func(_ string) config.Config {
-		return config.Config{Model: "gpt-5.3-codex"}
+		return config.Config{Model: "claude-opus-4.6"}
 	}
 
 	reviewGit = func() worktree.ShellGit {
