@@ -68,6 +68,31 @@ mkdir -p "$review_skill_dir"
 curl -fsSL "$review_skill_url" -o "$review_skill_dir/SKILL.md"
 ln -snf "$review_skill_dir" "$copilot_skill_root/review"
 
+# Install the notify hooks for Copilot CLI.
+hooks_dir="$HOME/.copilot/hooks"
+mkdir -p "$hooks_dir"
+cat > "$hooks_dir/fitz-notify.json" <<'HOOKS'
+{
+  "version": 1,
+  "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "fitz agent notify",
+        "timeoutSec": 5
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "fitz agent notify --clear",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
+HOOKS
+
 echo ""
 echo "fitz installed successfully!"
 echo "Run 'source $rc_file' to update your current shell, or open a new terminal."
