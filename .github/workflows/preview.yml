@@ -22,7 +22,8 @@ jobs:
       - name: Compute preview version
         id: version
         run: |
-          latest_tag=$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --abbrev=0 2>/dev/null || echo "v0.0.0")
+          # Find latest stable release (exclude prereleases)
+          latest_tag=$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude '*-*' --abbrev=0 2>/dev/null || echo "v0.0.0")
           commit_count=$(git rev-list "${latest_tag}..HEAD" --count)
           if [ "$commit_count" = "0" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -31,7 +32,16 @@ jobs:
           base=${latest_tag#v}
           IFS='.' read -r major minor patch <<< "$base"
           next_patch=$((patch + 1))
-          version="v${major}.${minor}.${next_patch}-preview.${commit_count}"
+          # Increment from highest existing preview tag instead of using commit count
+          preview_num=0
+          for tag in $(git tag -l "v${major}.${minor}.${next_patch}-preview.*"); do
+            num=${tag##*preview.}
+            if [ "$num" -gt "$preview_num" ] 2>/dev/null; then
+              preview_num=$num
+            fi
+          done
+          preview_num=$((preview_num + 1))
+          version="v${major}.${minor}.${next_patch}-preview.${preview_num}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "skip=false" >> "$GITHUB_OUTPUT"
       - name: Build release binaries
