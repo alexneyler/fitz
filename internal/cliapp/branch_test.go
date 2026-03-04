@@ -228,7 +228,7 @@ func TestBrNewFetchesOriginAndUsesDefaultBase(t *testing.T) {
 		}
 	}
 
-	run(bareDir, "init", "--bare")
+	run(bareDir, "init", "--bare", "--initial-branch=main")
 
 	// Clone the bare repo.
 	cloneDir := t.TempDir()
