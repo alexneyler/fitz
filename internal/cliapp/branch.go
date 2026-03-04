@@ -177,9 +177,10 @@ func BrCheckout(ctx context.Context, w io.Writer, pr string) error {
 		return fmt.Errorf("fetch PR #%d: %w", prNumber, err)
 	}
 
-	// Create a worktree with a new local branch starting at the fetched PR head.
+	// Create a worktree with a local branch starting at the fetched PR head.
+	// Use CreateForce (-B) so the branch is reset if it already exists locally.
 	mgr := &worktree.Manager{Git: git}
-	path, err := mgr.Create(cwd, info.HeadRefName, "FETCH_HEAD")
+	path, err := mgr.CreateForce(cwd, info.HeadRefName, "FETCH_HEAD")
 	if err != nil {
 		return fmt.Errorf("create worktree: %w", err)
 	}
@@ -289,10 +290,8 @@ func launchBranchInteractive(w io.Writer, path, name, repo string, cfg config.Co
 	}
 }
 
-func openBranchInZellij(w io.Writer, path, name, repo string, cfg config.Config) error {
-	if _, err := lookPath("copilot"); err != nil {
-		return errors.New("copilot not found in PATH")
-	}
+// openZellijTab opens a new Zellij tab running copilot with the given args.
+func openZellijTab(path, name, repo string, copilotArgs []string, cfg config.Config) error {
 	zellijPath, err := lookPath("zellij")
 	if err != nil {
 		return errors.New("zellij not found in PATH")
@@ -308,7 +307,7 @@ func openBranchInZellij(w io.Writer, path, name, repo string, cfg config.Config)
 		return err
 	}
 
-	layoutPath, err := writeZellijBranchLayout(copilotBaseArgs(cfg), splitDirection)
+	layoutPath, err := writeZellijBranchLayout(copilotArgs, splitDirection)
 	if err != nil {
 		return fmt.Errorf("create zellij layout: %w", err)
 	}
@@ -320,13 +319,22 @@ func openBranchInZellij(w io.Writer, path, name, repo string, cfg config.Config)
 	}
 	tabName := name
 	if repo != "" {
-		tabName = repo + "/" + name
+		tabName = repo + ":" + name
 	}
 	args = append(args, "action", "new-tab", "--name", tabName, "--cwd", path, "--layout", layoutPath)
 	if err := runCommand(zellijPath, args, path); err != nil {
 		return fmt.Errorf("open zellij tab: %w", err)
 	}
+	return nil
+}
 
+func openBranchInZellij(w io.Writer, path, name, repo string, cfg config.Config) error {
+	if _, err := lookPath("copilot"); err != nil {
+		return errors.New("copilot not found in PATH")
+	}
+	if err := openZellijTab(path, name, repo, copilotBaseArgs(cfg), cfg); err != nil {
+		return err
+	}
 	fmt.Fprintf(w, "worktree created: %s\n", name)
 	fmt.Fprintln(w, "opened in zellij")
 	return nil
@@ -405,15 +413,6 @@ func BrGo(ctx context.Context, w io.Writer, name string) error {
 		return fmt.Errorf("get worktree path: %w", err)
 	}
 
-	copilotPath, err := lookPath("copilot")
-	if err != nil {
-		return errors.New("copilot not found in PATH")
-	}
-
-	if err := os.Chdir(path); err != nil {
-		return fmt.Errorf("cd to worktree: %w", err)
-	}
-
 	cfg := loadEffectiveConfig(cwd)
 	args := copilotBaseArgs(cfg)
 	if configDir := copilotConfigDir(); configDir != "" {
@@ -422,7 +421,31 @@ func BrGo(ctx context.Context, w io.Writer, name string) error {
 		}
 	}
 
-	return runExec(copilotPath, args, os.Environ())
+	mode := strings.TrimSpace(cfg.BranchOpenMode)
+	if mode == "" {
+		mode = "zellij"
+	}
+
+	switch mode {
+	case "zellij":
+		_, repo, _ := worktree.RepoID(git, cwd)
+		if err := openZellijTab(path, name, repo, args, cfg); err != nil {
+			return err
+		}
+		fmt.Fprintln(w, "opened in zellij")
+		return nil
+	case "standard":
+		copilotPath, err := lookPath("copilot")
+		if err != nil {
+			return errors.New("copilot not found in PATH")
+		}
+		if err := os.Chdir(path); err != nil {
+			return fmt.Errorf("cd to worktree: %w", err)
+		}
+		return runExec(copilotPath, args, os.Environ())
+	default:
+		return fmt.Errorf("invalid branch-open-mode: %s (valid values: zellij, standard)", mode)
+	}
 }
 
 func BrRemove(ctx context.Context, w io.Writer, name string, force bool) error {

@@ -53,6 +53,17 @@ func DirName(name string) string {
 }
 
 func (m *Manager) Create(dir, name, base string) (string, error) {
+	return m.create(dir, name, base, "-b")
+}
+
+// CreateForce is like Create but uses -B instead of -b, allowing the branch
+// to be reset if it already exists. Use this for PR checkout where the branch
+// may already exist from a previous checkout.
+func (m *Manager) CreateForce(dir, name, base string) (string, error) {
+	return m.create(dir, name, base, "-B")
+}
+
+func (m *Manager) create(dir, name, base, branchFlag string) (string, error) {
 	if err := ValidateName(name); err != nil {
 		return "", err
 	}
@@ -85,7 +96,7 @@ func (m *Manager) Create(dir, name, base string) (string, error) {
 		return "", errors.New("worktree path would escape .fitz directory")
 	}
 
-	args := []string{"worktree", "add", path, "-b", name}
+	args := []string{"worktree", "add", path, branchFlag, name}
 	if base != "" {
 		args = append(args, base)
 	}
