@@ -506,6 +506,76 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	}
 }
 
+func TestOpenZellijTab_IncludesResumeArgs(t *testing.T) {
+	originalLook := lookPath
+	originalRunCmd := runCommand
+	originalZellijEnv := os.Getenv("ZELLIJ")
+	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
+	t.Cleanup(func() {
+		lookPath = originalLook
+		runCommand = originalRunCmd
+		_ = os.Setenv("ZELLIJ", originalZellijEnv)
+		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
+	})
+
+	lookPath = func(bin string) (string, error) {
+		switch bin {
+		case "zellij":
+			return "/usr/bin/zellij", nil
+		case "copilot":
+			return "/usr/bin/copilot", nil
+		default:
+			return "", fmt.Errorf("unknown binary %s", bin)
+		}
+	}
+
+	var layoutContent string
+	var calledArgs []string
+	runCommand = func(binary string, args []string, dir string) error {
+		calledArgs = append([]string{}, args...)
+		for i := 0; i < len(args)-1; i++ {
+			if args[i] == "--layout" {
+				data, err := os.ReadFile(args[i+1])
+				if err != nil {
+					return err
+				}
+				layoutContent = string(data)
+				break
+			}
+		}
+		return nil
+	}
+
+	_ = os.Setenv("ZELLIJ", "0")
+	_ = os.Setenv("ZELLIJ_SESSION_NAME", "dev-session")
+
+	wtPath := t.TempDir()
+	copilotArgs := []string{"copilot", "--model", "test-model", "--resume", "session-abc"}
+	cfg := config.Config{BranchZellijLayout: "vertical"}
+	if err := openZellijTab(wtPath, "my-branch", "myrepo", copilotArgs, cfg); err != nil {
+		t.Fatalf("openZellijTab: %v", err)
+	}
+
+	// Verify layout includes resume args.
+	if !strings.Contains(layoutContent, `"--resume"`) {
+		t.Fatalf("layout = %q, want --resume arg", layoutContent)
+	}
+	if !strings.Contains(layoutContent, `"session-abc"`) {
+		t.Fatalf("layout = %q, want session ID", layoutContent)
+	}
+
+	// Verify tab name.
+	var tabName string
+	for i := 0; i < len(calledArgs)-1; i++ {
+		if calledArgs[i] == "--name" {
+			tabName = calledArgs[i+1]
+		}
+	}
+	if tabName != "myrepo/my-branch" {
+		t.Fatalf("tab name = %q, want %q", tabName, "myrepo/my-branch")
+	}
+}
+
 func TestLaunchBranchInteractive_ZellijRequiresSessionContext(t *testing.T) {
 	originalLook := lookPath
 	originalZellijEnv := os.Getenv("ZELLIJ")
