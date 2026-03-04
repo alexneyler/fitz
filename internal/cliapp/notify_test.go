@@ -9,17 +9,17 @@ import (
 
 func TestAgentNotifyRenamesTab(t *testing.T) {
 	origBranch := resolveCurrentBranch
-	origRenameTab := zellijRenameTab
+	origRun := zellijRun
 	t.Cleanup(func() {
 		resolveCurrentBranch = origBranch
-		zellijRenameTab = origRenameTab
+		zellijRun = origRun
 	})
 
 	resolveCurrentBranch = func() (string, error) { return "feature-auth", nil }
 
-	var gotName string
-	zellijRenameTab = func(name string) error {
-		gotName = name
+	var gotArgs []string
+	zellijRun = func(args ...string) error {
+		gotArgs = args
 		return nil
 	}
 
@@ -27,24 +27,24 @@ func TestAgentNotifyRenamesTab(t *testing.T) {
 	if err := AgentNotify(&out, false); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gotName != "* feature-auth" {
-		t.Fatalf("tab name = %q, want %q", gotName, "* feature-auth")
+	if len(gotArgs) != 3 || gotArgs[0] != "action" || gotArgs[1] != "rename-tab" || gotArgs[2] != "* feature-auth" {
+		t.Fatalf("zellijRun args = %v, want [action rename-tab * feature-auth]", gotArgs)
 	}
 }
 
 func TestAgentNotifyClearRenamesTab(t *testing.T) {
 	origBranch := resolveCurrentBranch
-	origRenameTab := zellijRenameTab
+	origRun := zellijRun
 	t.Cleanup(func() {
 		resolveCurrentBranch = origBranch
-		zellijRenameTab = origRenameTab
+		zellijRun = origRun
 	})
 
 	resolveCurrentBranch = func() (string, error) { return "feature-auth", nil }
 
-	var gotName string
-	zellijRenameTab = func(name string) error {
-		gotName = name
+	var gotArgs []string
+	zellijRun = func(args ...string) error {
+		gotArgs = args
 		return nil
 	}
 
@@ -52,21 +52,21 @@ func TestAgentNotifyClearRenamesTab(t *testing.T) {
 	if err := AgentNotify(&out, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gotName != "feature-auth" {
-		t.Fatalf("tab name = %q, want %q", gotName, "feature-auth")
+	if len(gotArgs) != 3 || gotArgs[2] != "feature-auth" {
+		t.Fatalf("zellijRun args = %v, want [action rename-tab feature-auth]", gotArgs)
 	}
 }
 
 func TestAgentNotifyBellWhenNotZellij(t *testing.T) {
 	origBranch := resolveCurrentBranch
-	origRenameTab := zellijRenameTab
+	origRun := zellijRun
 	t.Cleanup(func() {
 		resolveCurrentBranch = origBranch
-		zellijRenameTab = origRenameTab
+		zellijRun = origRun
 	})
 
 	resolveCurrentBranch = func() (string, error) { return "feature-auth", nil }
-	zellijRenameTab = func(name string) error {
+	zellijRun = func(args ...string) error {
 		return errNotInZellij
 	}
 
@@ -81,14 +81,14 @@ func TestAgentNotifyBellWhenNotZellij(t *testing.T) {
 
 func TestAgentNotifyClearNoOutputWhenNotZellij(t *testing.T) {
 	origBranch := resolveCurrentBranch
-	origRenameTab := zellijRenameTab
+	origRun := zellijRun
 	t.Cleanup(func() {
 		resolveCurrentBranch = origBranch
-		zellijRenameTab = origRenameTab
+		zellijRun = origRun
 	})
 
 	resolveCurrentBranch = func() (string, error) { return "feature-auth", nil }
-	zellijRenameTab = func(name string) error {
+	zellijRun = func(args ...string) error {
 		return errNotInZellij
 	}
 

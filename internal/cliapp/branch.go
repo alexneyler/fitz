@@ -180,13 +180,8 @@ func openBranchInZellij(w io.Writer, path, name string, cfg config.Config) error
 	if _, err := lookPath("copilot"); err != nil {
 		return errors.New("copilot not found in PATH")
 	}
-	zellijPath, err := lookPath("zellij")
-	if err != nil {
-		return errors.New("zellij not found in PATH")
-	}
-	inZellij := strings.TrimSpace(os.Getenv("ZELLIJ")) != ""
-	sessionName := strings.TrimSpace(os.Getenv("ZELLIJ_SESSION_NAME"))
-	if !inZellij && sessionName == "" {
+	sessionName := zellijSessionName()
+	if !isZellij() && sessionName == "" {
 		return errors.New("zellij mode requires an active zellij session; run from inside zellij or set branch-open-mode=standard")
 	}
 
@@ -206,7 +201,7 @@ func openBranchInZellij(w io.Writer, path, name string, cfg config.Config) error
 		args = append(args, "--session", sessionName)
 	}
 	args = append(args, "action", "new-tab", "--name", name, "--cwd", path, "--layout", layoutPath)
-	if err := runCommand(zellijPath, args, path); err != nil {
+	if err := zellijRun(args...); err != nil {
 		return fmt.Errorf("open zellij tab: %w", err)
 	}
 

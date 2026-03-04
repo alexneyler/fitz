@@ -360,21 +360,19 @@ func TestZellijBranchLayoutIncludesCopilotAndSplit(t *testing.T) {
 func TestLaunchBranchInteractive_Zellij_UsesConfiguredLayout(t *testing.T) {
 	originalExec := runExec
 	originalLook := lookPath
-	originalRunCmd := runCommand
+	originalZellijRun := zellijRun
 	originalZellijEnv := os.Getenv("ZELLIJ")
 	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
 	t.Cleanup(func() {
 		runExec = originalExec
 		lookPath = originalLook
-		runCommand = originalRunCmd
+		zellijRun = originalZellijRun
 		_ = os.Setenv("ZELLIJ", originalZellijEnv)
 		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
 	})
 
 	lookPath = func(bin string) (string, error) {
 		switch bin {
-		case "zellij":
-			return "/usr/bin/zellij", nil
 		case "copilot":
 			return "/usr/bin/copilot", nil
 		default:
@@ -385,7 +383,7 @@ func TestLaunchBranchInteractive_Zellij_UsesConfiguredLayout(t *testing.T) {
 	runExec = func(binary string, args []string, env []string) error { return nil }
 
 	var layoutContent string
-	runCommand = func(binary string, args []string, dir string) error {
+	zellijRun = func(args ...string) error {
 		for i := 0; i < len(args)-1; i++ {
 			if args[i] == "--layout" {
 				data, err := os.ReadFile(args[i+1])
@@ -417,21 +415,19 @@ func TestLaunchBranchInteractive_Zellij_UsesConfiguredLayout(t *testing.T) {
 func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	originalExec := runExec
 	originalLook := lookPath
-	originalRunCmd := runCommand
+	originalZellijRun := zellijRun
 	originalZellijEnv := os.Getenv("ZELLIJ")
 	originalSessionEnv := os.Getenv("ZELLIJ_SESSION_NAME")
 	t.Cleanup(func() {
 		runExec = originalExec
 		lookPath = originalLook
-		runCommand = originalRunCmd
+		zellijRun = originalZellijRun
 		_ = os.Setenv("ZELLIJ", originalZellijEnv)
 		_ = os.Setenv("ZELLIJ_SESSION_NAME", originalSessionEnv)
 	})
 
 	lookPath = func(bin string) (string, error) {
 		switch bin {
-		case "zellij":
-			return "/usr/bin/zellij", nil
 		case "copilot":
 			return "/usr/bin/copilot", nil
 		default:
@@ -445,13 +441,9 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 		return nil
 	}
 
-	var calledBinary string
 	var calledArgs []string
-	var calledDir string
-	runCommand = func(binary string, args []string, dir string) error {
-		calledBinary = binary
+	zellijRun = func(args ...string) error {
 		calledArgs = append([]string{}, args...)
-		calledDir = dir
 		return nil
 	}
 
@@ -468,14 +460,8 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 	if execCalled {
 		t.Fatal("runExec should not be called in zellij mode")
 	}
-	if calledBinary != "/usr/bin/zellij" {
-		t.Fatalf("binary = %q, want /usr/bin/zellij", calledBinary)
-	}
 	if len(calledArgs) < 4 || calledArgs[0] != "--session" || calledArgs[1] != "dev-session" || calledArgs[2] != "action" || calledArgs[3] != "new-tab" {
-		t.Fatalf("args = %v, want zellij --session dev-session action new-tab ...", calledArgs)
-	}
-	if calledDir != wtPath {
-		t.Fatalf("dir = %q, want %q", calledDir, wtPath)
+		t.Fatalf("args = %v, want --session dev-session action new-tab ...", calledArgs)
 	}
 
 	var layoutPath string
@@ -507,8 +493,8 @@ func TestLaunchBranchInteractive_ZellijRequiresSessionContext(t *testing.T) {
 
 	lookPath = func(bin string) (string, error) {
 		switch bin {
-		case "zellij", "copilot":
-			return "/usr/bin/" + bin, nil
+		case "copilot":
+			return "/usr/bin/copilot", nil
 		default:
 			return "", fmt.Errorf("unknown binary %s", bin)
 		}
