@@ -485,8 +485,8 @@ func TestLaunchBranchInteractive_Zellij(t *testing.T) {
 			tabName = calledArgs[i+1]
 		}
 	}
-	if tabName != "myrepo/feature-zellij" {
-		t.Fatalf("tab name = %q, want %q", tabName, "myrepo/feature-zellij")
+	if tabName != "myrepo:feature-zellij" {
+		t.Fatalf("tab name = %q, want %q", tabName, "myrepo:feature-zellij")
 	}
 
 	var layoutPath string
