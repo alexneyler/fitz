@@ -33,7 +33,16 @@ jobs:
           base=${latest_stable#v}
           IFS='.' read -r major minor patch <<< "$base"
           next_patch=$((patch + 1))
-          version="v${major}.${minor}.${next_patch}-preview.${commit_count}"
+          # Increment from highest existing preview tag instead of using commit count
+          preview_num=0
+          for tag in $(git tag -l "v${major}.${minor}.${next_patch}-preview.*"); do
+            num=${tag##*preview.}
+            if [ "$num" -gt "$preview_num" ] 2>/dev/null; then
+              preview_num=$num
+            fi
+          done
+          preview_num=$((preview_num + 1))
+          version="v${major}.${minor}.${next_patch}-preview.${preview_num}"
 
           # Find the most recent tag (stable or preview) for changelog comparison.
           prev_tag=$(git tag -l --sort=-version:refname 'v[0-9]*.[0-9]*.[0-9]*' | head -n 1)
