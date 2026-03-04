@@ -571,8 +571,8 @@ func TestOpenZellijTab_IncludesResumeArgs(t *testing.T) {
 			tabName = calledArgs[i+1]
 		}
 	}
-	if tabName != "myrepo/my-branch" {
-		t.Fatalf("tab name = %q, want %q", tabName, "myrepo/my-branch")
+	if tabName != "myrepo:my-branch" {
+		t.Fatalf("tab name = %q, want %q", tabName, "myrepo:my-branch")
 	}
 }
 
