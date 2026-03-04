@@ -765,6 +765,50 @@ func TestManagerCheckoutSlashName(t *testing.T) {
 	}
 }
 
+func TestManagerCreateForce(t *testing.T) {
+	git := &mockGit{
+		outputs: map[string]string{
+			"/test/repo:remote get-url origin ":                                                  "https://github.com/owner/repo.git",
+			"/test/repo:worktree add /home/user/.fitz/owner/repo/feature -B feature FETCH_HEAD ": "",
+		},
+		errs: make(map[string]error),
+	}
+
+	m := &Manager{
+		Git:     git,
+		HomeDir: "/home/user",
+	}
+
+	path, err := m.CreateForce("/test/repo", "feature", "FETCH_HEAD")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	wantPath := "/home/user/.fitz/owner/repo/feature"
+	if path != wantPath {
+		t.Errorf("path = %q, want %q", path, wantPath)
+	}
+
+	found := false
+	for _, call := range git.calls {
+		if len(call) > 1 && call[1] == "worktree" && call[2] == "add" {
+			found = true
+			if call[4] != "-B" {
+				t.Errorf("expected -B flag, got %q", call[4])
+			}
+			if call[5] != "feature" {
+				t.Errorf("branch name = %q, want feature", call[5])
+			}
+			if call[6] != "FETCH_HEAD" {
+				t.Errorf("base = %q, want FETCH_HEAD", call[6])
+			}
+		}
+	}
+	if !found {
+		t.Error("expected worktree add call")
+	}
+}
+
 func TestManagerCheckoutRejectsInvalidName(t *testing.T) {
 	git := &mockGit{
 		outputs: map[string]string{
