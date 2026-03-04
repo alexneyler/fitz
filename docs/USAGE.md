@@ -76,6 +76,10 @@
 
 ### Agent commands (humans can run these too)
 
+- `fitz agent notify` — update the Zellij tab name with a `*` prefix to signal the agent is waiting for input. Falls back to a terminal bell outside Zellij.
+  - Example: `fitz agent notify`
+- `fitz agent notify --clear` — remove the `*` prefix from the Zellij tab name.
+  - Example: `fitz agent notify --clear`
 - `fitz agent status [--pr <url>] [message]` — save status for the current branch. Use message, PR URL, or both.
   - Example: `fitz agent status "Implementing auth module"`
   - Example: `fitz agent status --pr https://github.com/owner/repo/pull/42`

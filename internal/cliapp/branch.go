@@ -292,13 +292,8 @@ func launchBranchInteractive(w io.Writer, path, name, repo string, cfg config.Co
 
 // openZellijTab opens a new Zellij tab running copilot with the given args.
 func openZellijTab(path, name, repo string, copilotArgs []string, cfg config.Config) error {
-	zellijPath, err := lookPath("zellij")
-	if err != nil {
-		return errors.New("zellij not found in PATH")
-	}
-	inZellij := strings.TrimSpace(os.Getenv("ZELLIJ")) != ""
-	sessionName := strings.TrimSpace(os.Getenv("ZELLIJ_SESSION_NAME"))
-	if !inZellij && sessionName == "" {
+	sessionName := zellijSessionName()
+	if !isZellij() && sessionName == "" {
 		return errors.New("zellij mode requires an active zellij session; run from inside zellij or set branch-open-mode=standard")
 	}
 
@@ -322,7 +317,7 @@ func openZellijTab(path, name, repo string, copilotArgs []string, cfg config.Con
 		tabName = repo + ":" + name
 	}
 	args = append(args, "action", "new-tab", "--name", tabName, "--cwd", path, "--layout", layoutPath)
-	if err := runCommand(zellijPath, args, path); err != nil {
+	if err := zellijRun(args...); err != nil {
 		return fmt.Errorf("open zellij tab: %w", err)
 	}
 	return nil

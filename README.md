@@ -8,7 +8,7 @@ Fitz is an opionated Copilot CLI manager with built-in worktree management so yo
 curl -fsSL https://raw.githubusercontent.com/alexneyler/fitz/main/install.sh | sh
 ```
 
-The installer installs agent skills to improve the experience with fitz.
+The installer installs agent skills and notification hooks to improve the experience with fitz.
 
 ## Commands
 
@@ -49,6 +49,7 @@ The installer installs agent skills to improve the experience with fitz.
 Fitz is built for both humans and agents. Agents can call these commands to report progress, and humans can run them directly when helpful.
 
 - `fitz agent` — workflow commands for agents to execute.
+  - `fitz agent notify [--clear]` — update the Zellij tab name with a `*` prefix to signal the agent is waiting. With `--clear`, removes the prefix. Falls back to a terminal bell outside Zellij.
   - `fitz agent status [--pr <url>] [message]` — store branch status metadata for `fitz br list` (message is capped to 80 chars).
   - `fitz agent help` — show agent usage and available subcommands.
 

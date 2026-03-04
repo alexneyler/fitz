@@ -68,6 +68,12 @@ mkdir -p "$review_skill_dir"
 curl -fsSL "$review_skill_url" -o "$review_skill_dir/SKILL.md"
 ln -snf "$review_skill_dir" "$copilot_skill_root/review"
 
+# Install the notify hooks for Copilot CLI.
+hooks_dir="$HOME/.copilot/hooks"
+mkdir -p "$hooks_dir"
+notify_hook_url="https://raw.githubusercontent.com/alexneyler/fitz/main/hooks/notify/hooks.json"
+curl -fsSL "$notify_hook_url" -o "$hooks_dir/fitz-notify.json"
+
 echo ""
 installed_version=$("$bin_path" version 2>/dev/null) || installed_version="fitz"
 echo "$installed_version installed successfully!"

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "fitz agent notify",
+        "timeoutSec": 5
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "fitz agent notify --clear",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}

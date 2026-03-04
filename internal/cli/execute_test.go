@@ -386,6 +386,57 @@ func TestParseAgentStatusArgs(t *testing.T) {
 	}
 }
 
+func TestExecuteAgentNotify(t *testing.T) {
+	prev := runAgentNotify
+	t.Cleanup(func() { runAgentNotify = prev })
+
+	var gotClear bool
+	runAgentNotify = func(w io.Writer, clear bool) error {
+		gotClear = clear
+		return nil
+	}
+
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"agent", "notify"}, strings.NewReader(""), &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotClear {
+		t.Fatal("clear = true, want false")
+	}
+}
+
+func TestExecuteAgentNotifyClear(t *testing.T) {
+	prev := runAgentNotify
+	t.Cleanup(func() { runAgentNotify = prev })
+
+	var gotClear bool
+	runAgentNotify = func(w io.Writer, clear bool) error {
+		gotClear = clear
+		return nil
+	}
+
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"agent", "notify", "--clear"}, strings.NewReader(""), &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !gotClear {
+		t.Fatal("clear = false, want true")
+	}
+}
+
+func TestAgentHelpListsNotify(t *testing.T) {
+	var out, errOut bytes.Buffer
+	err := Execute([]string{"agent", "help"}, strings.NewReader(""), &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "notify") {
+		t.Fatalf("stdout = %q, want 'notify' listed", out.String())
+	}
+}
+
 func TestBrHelpListsCo(t *testing.T) {
 	var out, errOut bytes.Buffer
 	stdin := strings.NewReader("")

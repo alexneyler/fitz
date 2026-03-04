@@ -14,6 +14,7 @@ import (
 var Version = "dev"
 var runUpdate = cliapp.Update
 var runAgentStatus = cliapp.AgentStatus
+var runAgentNotify = cliapp.AgentNotify
 var runReview = cliapp.Review
 
 // Subcommand represents a command that has its own sub-subcommands.
@@ -178,6 +179,7 @@ func (agentCommand) Help(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  help      Show this help message")
+	fmt.Fprintln(w, "  notify    Update tab name to signal agent activity (--clear to reset)")
 	fmt.Fprintln(w, "  status    Save branch status for agents (message and/or --pr URL)")
 }
 
@@ -188,6 +190,14 @@ func (a agentCommand) Run(_ context.Context, args []string, _ io.Reader, stdout,
 	}
 
 	switch args[0] {
+	case "notify":
+		clear := false
+		for _, arg := range args[1:] {
+			if arg == "--clear" {
+				clear = true
+			}
+		}
+		return runAgentNotify(stdout, clear)
 	case "status":
 		message, prURL, err := parseAgentStatusArgs(args[1:])
 		if err != nil {
