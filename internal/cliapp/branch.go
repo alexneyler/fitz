@@ -205,6 +205,12 @@ func BrNew(ctx context.Context, w io.Writer, name, base, prompt string) error {
 	git := worktree.ShellGit{}
 	mgr := &worktree.Manager{Git: git}
 
+	// Fetch latest from origin so the new branch starts up-to-date.
+	_, _ = git.Run(cwd, "fetch", "origin")
+	if base == "" {
+		base = "origin/" + detectDefaultBranch(git, cwd)
+	}
+
 	path, err := mgr.Create(cwd, name, base)
 	if err != nil {
 		return fmt.Errorf("create worktree: %w", err)

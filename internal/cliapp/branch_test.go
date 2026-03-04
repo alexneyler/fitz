@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -211,6 +212,107 @@ func TestBrPublish(t *testing.T) {
 	}
 	if !hasP {
 		t.Errorf("copilot args missing -p: %v", copilotArgs)
+	}
+}
+
+func TestBrNewFetchesOriginAndUsesDefaultBase(t *testing.T) {
+	// Set up a bare repo to act as "origin".
+	bareDir := t.TempDir()
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v in %s: %v\n%s", args, dir, err, out)
+		}
+	}
+
+	run(bareDir, "init", "--bare", "--initial-branch=main")
+
+	// Clone the bare repo.
+	cloneDir := t.TempDir()
+	run(cloneDir, "clone", bareDir, "work")
+	workDir := filepath.Join(cloneDir, "work")
+
+	// Make an initial commit in the clone and push.
+	if err := os.WriteFile(filepath.Join(workDir, "file.txt"), []byte("v1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(workDir, "add", ".")
+	run(workDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
+	run(workDir, "push", "origin", "main")
+
+	// Add another commit directly to origin (simulates remote work).
+	secondClone := t.TempDir()
+	run(secondClone, "clone", bareDir, "work2")
+	work2Dir := filepath.Join(secondClone, "work2")
+	if err := os.WriteFile(filepath.Join(work2Dir, "file.txt"), []byte("v2"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(work2Dir, "add", ".")
+	run(work2Dir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "remote update")
+	run(work2Dir, "push", "origin", "main")
+
+	// Record the latest origin commit.
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = work2Dir
+	latestBytes, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	latestSHA := strings.TrimSpace(string(latestBytes))
+
+	// Redirect HOME to a temp dir so worktrees don't leak into real home.
+	fakeHome := t.TempDir()
+	origHome := os.Getenv("HOME")
+	t.Cleanup(func() { _ = os.Setenv("HOME", origHome) })
+	_ = os.Setenv("HOME", fakeHome)
+
+	// Now from workDir (which is behind origin), call BrNew.
+	// It should fetch and base the new branch on origin/main.
+	originalDir, _ := os.Getwd()
+	t.Cleanup(func() { _ = os.Chdir(originalDir) })
+	if err := os.Chdir(workDir); err != nil {
+		t.Fatal(err)
+	}
+
+	// Stub launchBranchInteractive to avoid TUI.
+	originalExec := runExec
+	originalLook := lookPath
+	originalLoadCfg := loadEffectiveConfig
+	t.Cleanup(func() {
+		runExec = originalExec
+		lookPath = originalLook
+		loadEffectiveConfig = originalLoadCfg
+	})
+
+	lookPath = func(string) (string, error) { return "/usr/bin/copilot", nil }
+	loadEffectiveConfig = func(dir string) config.Config {
+		return config.Config{BranchOpenMode: "standard"}
+	}
+	runExec = func(binary string, args []string, env []string) error { return nil }
+
+	var out bytes.Buffer
+	err = BrNew(context.Background(), &out, "test-fetch-branch", "", "")
+	t.Cleanup(func() {
+		_ = exec.Command("git", "-C", workDir, "worktree", "prune").Run()
+		_ = exec.Command("git", "-C", workDir, "branch", "-D", "test-fetch-branch").Run()
+	})
+	if err != nil {
+		t.Fatalf("BrNew: %v", err)
+	}
+
+	// Verify the new branch points to the latest origin commit.
+	cmd = exec.Command("git", "-C", workDir, "rev-parse", "test-fetch-branch")
+	branchBytes, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("rev-parse test-fetch-branch: %v", err)
+	}
+	branchSHA := strings.TrimSpace(string(branchBytes))
+
+	if branchSHA != latestSHA {
+		t.Errorf("branch SHA = %s, want %s (latest origin)", branchSHA, latestSHA)
 	}
 }
 
