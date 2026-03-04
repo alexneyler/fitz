@@ -71,27 +71,8 @@ ln -snf "$review_skill_dir" "$copilot_skill_root/review"
 # Install the notify hooks for Copilot CLI.
 hooks_dir="$HOME/.copilot/hooks"
 mkdir -p "$hooks_dir"
-cat > "$hooks_dir/fitz-notify.json" <<'HOOKS'
-{
-  "version": 1,
-  "hooks": {
-    "agentStop": [
-      {
-        "type": "command",
-        "bash": "fitz agent notify",
-        "timeoutSec": 5
-      }
-    ],
-    "userPromptSubmitted": [
-      {
-        "type": "command",
-        "bash": "fitz agent notify --clear",
-        "timeoutSec": 5
-      }
-    ]
-  }
-}
-HOOKS
+notify_hook_url="https://raw.githubusercontent.com/alexneyler/fitz/main/hooks/notify/hooks.json"
+curl -fsSL "$notify_hook_url" -o "$hooks_dir/fitz-notify.json"
 
 echo ""
 echo "fitz installed successfully!"
