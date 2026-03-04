@@ -314,7 +314,7 @@ func openBranchInZellij(w io.Writer, path, name, repo string, cfg config.Config)
 	}
 	tabName := name
 	if repo != "" {
-		tabName = repo + "/" + name
+		tabName = repo + ":" + name
 	}
 	args = append(args, "action", "new-tab", "--name", tabName, "--cwd", path, "--layout", layoutPath)
 	if err := runCommand(zellijPath, args, path); err != nil {
