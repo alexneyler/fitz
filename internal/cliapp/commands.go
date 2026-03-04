@@ -215,7 +215,7 @@ _fitz_completion() {
   fi
 
   if [[ ${COMP_CWORD} -eq 2 && "$prev" == "agent" ]]; then
-    COMPREPLY=( $(compgen -W "status help" -- "$cur") )
+    COMPREPLY=( $(compgen -W "status notify help" -- "$cur") )
     return
   fi
 
@@ -245,7 +245,7 @@ _fitz() {
   commands=(help version update completion agent br review todo)
   shells=(bash zsh)
   br_cmds=(new go rm list cd publish help)
-  agent_cmds=(status help)
+  agent_cmds=(status notify help)
   todo_cmds=(list help)
 
   if (( CURRENT == 2 )); then
