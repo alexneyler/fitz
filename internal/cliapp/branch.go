@@ -177,9 +177,10 @@ func BrCheckout(ctx context.Context, w io.Writer, pr string) error {
 		return fmt.Errorf("fetch PR #%d: %w", prNumber, err)
 	}
 
-	// Create a worktree with a new local branch starting at the fetched PR head.
+	// Create a worktree with a local branch starting at the fetched PR head.
+	// Use CreateForce (-B) so the branch is reset if it already exists locally.
 	mgr := &worktree.Manager{Git: git}
-	path, err := mgr.Create(cwd, info.HeadRefName, "FETCH_HEAD")
+	path, err := mgr.CreateForce(cwd, info.HeadRefName, "FETCH_HEAD")
 	if err != nil {
 		return fmt.Errorf("create worktree: %w", err)
 	}
