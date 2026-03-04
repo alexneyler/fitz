@@ -16,20 +16,21 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.26"
       - run: make lint
       - run: make test
       - name: Compute preview version
         id: version
         run: |
-          # Find latest stable release (exclude prereleases)
-          latest_tag=$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude '*-*' --abbrev=0 2>/dev/null || echo "v0.0.0")
-          commit_count=$(git rev-list "${latest_tag}..HEAD" --count)
+          # Use only stable tags (no prerelease suffix) for version arithmetic.
+          latest_stable=$(git tag -l --sort=-version:refname 'v[0-9]*.[0-9]*.[0-9]*' | grep -v '-' | head -n 1)
+          latest_stable=${latest_stable:-v0.0.0}
+          commit_count=$(git rev-list "${latest_stable}..HEAD" --count)
           if [ "$commit_count" = "0" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          base=${latest_tag#v}
+          base=${latest_stable#v}
           IFS='.' read -r major minor patch <<< "$base"
           next_patch=$((patch + 1))
           # Increment from highest existing preview tag instead of using commit count
@@ -42,16 +43,38 @@ jobs:
           done
           preview_num=$((preview_num + 1))
           version="v${major}.${minor}.${next_patch}-preview.${preview_num}"
+
+          # Find the most recent tag (stable or preview) for changelog comparison.
+          prev_tag=$(git tag -l --sort=-version:refname 'v[0-9]*.[0-9]*.[0-9]*' | head -n 1)
+
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=${prev_tag:-}" >> "$GITHUB_OUTPUT"
           echo "skip=false" >> "$GITHUB_OUTPUT"
       - name: Build release binaries
         if: steps.version.outputs.skip != 'true'
         run: make release VERSION=${{ steps.version.outputs.version }}
+      - name: Generate changelog
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "${{ steps.version.outputs.prev_tag }}" ]; then
+            gh api repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="${{ steps.version.outputs.version }}" \
+              -f target_commitish="${{ github.sha }}" \
+              -f previous_tag_name="${{ steps.version.outputs.prev_tag }}" \
+              --jq '.body' > release_notes.md
+          else
+            gh api repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="${{ steps.version.outputs.version }}" \
+              -f target_commitish="${{ github.sha }}" \
+              --jq '.body' > release_notes.md
+          fi
       - name: Create GitHub Pre-release
         if: steps.version.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
           prerelease: true
-          generate_release_notes: true
+          body_path: release_notes.md
           files: dist/*
