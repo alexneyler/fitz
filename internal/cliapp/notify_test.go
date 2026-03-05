@@ -7,7 +7,52 @@ import (
 	"testing"
 )
 
+func stubFitzDir(t *testing.T) {
+	t.Helper()
+	origGetwd := getwd
+	origHome := userHomeDir
+	t.Cleanup(func() {
+		getwd = origGetwd
+		userHomeDir = origHome
+	})
+	home := "/fake/home"
+	userHomeDir = func() (string, error) { return home, nil }
+	getwd = func() (string, error) { return home + "/.fitz/owner/repo/branch", nil }
+}
+
+func TestAgentNotifyNoOpWhenNotInFitzDir(t *testing.T) {
+	origBranch := resolveCurrentBranch
+	origRun := zellijRun
+	origGetwd := getwd
+	t.Cleanup(func() {
+		resolveCurrentBranch = origBranch
+		zellijRun = origRun
+		getwd = origGetwd
+	})
+
+	getwd = func() (string, error) { return "/some/random/dir", nil }
+	resolveCurrentBranch = func() (string, error) { return "feature-auth", nil }
+
+	called := false
+	zellijRun = func(args ...string) error {
+		called = true
+		return nil
+	}
+
+	var out bytes.Buffer
+	if err := AgentNotify(&out, false); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if called {
+		t.Fatal("zellijRun should not have been called")
+	}
+	if out.String() != "" {
+		t.Fatalf("stdout = %q, want empty", out.String())
+	}
+}
+
 func TestAgentNotifyRenamesTab(t *testing.T) {
+	stubFitzDir(t)
 	origBranch := resolveCurrentBranch
 	origRun := zellijRun
 	t.Cleanup(func() {
@@ -33,6 +78,7 @@ func TestAgentNotifyRenamesTab(t *testing.T) {
 }
 
 func TestAgentNotifyClearRenamesTab(t *testing.T) {
+	stubFitzDir(t)
 	origBranch := resolveCurrentBranch
 	origRun := zellijRun
 	t.Cleanup(func() {
@@ -58,6 +104,7 @@ func TestAgentNotifyClearRenamesTab(t *testing.T) {
 }
 
 func TestAgentNotifyBellWhenNotZellij(t *testing.T) {
+	stubFitzDir(t)
 	origBranch := resolveCurrentBranch
 	origRun := zellijRun
 	t.Cleanup(func() {
@@ -80,6 +127,7 @@ func TestAgentNotifyBellWhenNotZellij(t *testing.T) {
 }
 
 func TestAgentNotifyClearNoOutputWhenNotZellij(t *testing.T) {
+	stubFitzDir(t)
 	origBranch := resolveCurrentBranch
 	origRun := zellijRun
 	t.Cleanup(func() {
@@ -101,15 +149,31 @@ func TestAgentNotifyClearNoOutputWhenNotZellij(t *testing.T) {
 	}
 }
 
-func TestAgentNotifyPropagatesBranchError(t *testing.T) {
+func TestAgentNotifyNoOpWhenNotInRepo(t *testing.T) {
+	stubFitzDir(t)
 	origBranch := resolveCurrentBranch
-	t.Cleanup(func() { resolveCurrentBranch = origBranch })
+	origRun := zellijRun
+	t.Cleanup(func() {
+		resolveCurrentBranch = origBranch
+		zellijRun = origRun
+	})
 
 	resolveCurrentBranch = func() (string, error) { return "", fmt.Errorf("not a repo") }
 
+	called := false
+	zellijRun = func(args ...string) error {
+		called = true
+		return nil
+	}
+
 	var out bytes.Buffer
-	err := AgentNotify(&out, false)
-	if err == nil || !strings.Contains(err.Error(), "not a repo") {
-		t.Fatalf("error = %v", err)
+	if err := AgentNotify(&out, false); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if called {
+		t.Fatal("zellijRun should not have been called")
+	}
+	if out.String() != "" {
+		t.Fatalf("stdout = %q, want empty", out.String())
 	}
 }

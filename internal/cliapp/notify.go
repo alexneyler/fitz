@@ -4,12 +4,34 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
+var getwd = os.Getwd
+var userHomeDir = os.UserHomeDir
+
 func AgentNotify(w io.Writer, clear bool) error {
+	cwd, err := getwd()
+	if err != nil {
+		return nil
+	}
+
+	homeDir, err := userHomeDir()
+	if err != nil {
+		return nil
+	}
+
+	fitzDir := filepath.Join(homeDir, ".fitz")
+	if !strings.HasPrefix(cwd, fitzDir+string(filepath.Separator)) {
+		return nil
+	}
+
 	branch, err := resolveCurrentBranch()
 	if err != nil {
-		return fmt.Errorf("get current branch: %w", err)
+		// Not in a git repo / worktree — silently no-op.
+		return nil
 	}
 
 	tabName := "* " + branch
