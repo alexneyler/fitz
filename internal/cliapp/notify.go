@@ -9,7 +9,8 @@ import (
 func AgentNotify(w io.Writer, clear bool) error {
 	branch, err := resolveCurrentBranch()
 	if err != nil {
-		return fmt.Errorf("get current branch: %w", err)
+		// Not in a git repo / worktree — silently no-op.
+		return nil
 	}
 
 	tabName := "* " + branch

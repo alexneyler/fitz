@@ -101,15 +101,30 @@ func TestAgentNotifyClearNoOutputWhenNotZellij(t *testing.T) {
 	}
 }
 
-func TestAgentNotifyPropagatesBranchError(t *testing.T) {
+func TestAgentNotifyNoOpWhenNotInRepo(t *testing.T) {
 	origBranch := resolveCurrentBranch
-	t.Cleanup(func() { resolveCurrentBranch = origBranch })
+	origRun := zellijRun
+	t.Cleanup(func() {
+		resolveCurrentBranch = origBranch
+		zellijRun = origRun
+	})
 
 	resolveCurrentBranch = func() (string, error) { return "", fmt.Errorf("not a repo") }
 
+	called := false
+	zellijRun = func(args ...string) error {
+		called = true
+		return nil
+	}
+
 	var out bytes.Buffer
-	err := AgentNotify(&out, false)
-	if err == nil || !strings.Contains(err.Error(), "not a repo") {
-		t.Fatalf("error = %v", err)
+	if err := AgentNotify(&out, false); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if called {
+		t.Fatal("zellijRun should not have been called")
+	}
+	if out.String() != "" {
+		t.Fatalf("stdout = %q, want empty", out.String())
 	}
 }
